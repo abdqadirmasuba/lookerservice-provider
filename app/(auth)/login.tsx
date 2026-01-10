@@ -59,10 +59,10 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Header Section */}
-          <LinearGradient
+          {/* <LinearGradient
             colors={['#F57C1F', '#E06A0F']}
             className="pt-8 pb-12 px-6 rounded-b-[40px]"
-          >
+          > */}
             <View className="items-center mt-4">
               <View className="w-20 h-20 bg-white/20 rounded-2xl items-center justify-center mb-4">
                 <Text className="text-white text-3xl font-bold">LS</Text>
@@ -70,7 +70,7 @@ export default function LoginScreen() {
               <Text className="text-white text-2xl font-bold">Provider Login</Text>
               <Text className="text-white/80 text-sm mt-1">Welcome back! Login to continue</Text>
             </View>
-          </LinearGradient>
+          {/* </LinearGradient> */}
 
           {/* Form Section */}
           <View className="px-6 -mt-6">

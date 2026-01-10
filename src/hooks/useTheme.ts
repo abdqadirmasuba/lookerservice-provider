@@ -14,7 +14,7 @@ export const useTheme = () => {
     if (mode === 'system') {
       dispatch(setColorScheme(systemColorScheme));
     } else {
-      dispatch(setColorScheme(mode as 'light' | 'dark');
+      dispatch(setColorScheme(mode as 'light' | 'dark'));
     }
   }, [mode, systemColorScheme]);
 
