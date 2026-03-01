@@ -28,6 +28,7 @@ import {
   showRequiredFieldAlert,
 } from '@/src/utils/alerts';
 import {apiRequests} from '@/src/utils/apiRequest';
+import axios from 'axios';
 
 type TabType = 'email' | 'phone';
 
@@ -70,10 +71,12 @@ export default function LoginScreen() {
     dispatch(loginStart());
     try {
       const response = await apiRequests.post('/auth/login', {
-        identifier: activeTab === 'email' ? email : phone,
+        email,
+        phone,
         password,
       });
       const res = response.data;
+      console.log('Login response:', res);
       if (res.success && res.data) {
         // Store refresh token in AsyncStorage
         await AsyncStorage.setItem(REFRESH_TOKEN_KEY, res.data.refresh_token);
@@ -81,6 +84,7 @@ export default function LoginScreen() {
         dispatch(loginSuccess({
           token: res.data.access_token,
           refreshToken: res.data.refresh_token,
+          providerBusinesses: res.data.provider_businesses || [],
         }));
         dispatch(setUser({
           id: res.data.user.id,
@@ -98,6 +102,7 @@ export default function LoginScreen() {
         showErrorAlert('Login Failed', res.message || 'Invalid credentials. Please try again.');
       }
     } catch (error: any) {
+      console.error('Login error:', error );
       dispatch(loginFailure(error?.message || 'Login failed'));
       showErrorAlert('Login Failed', 'Invalid credentials. Please try again.');
     }

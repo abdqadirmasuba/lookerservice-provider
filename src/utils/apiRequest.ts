@@ -6,6 +6,7 @@ const api = axios.create({
   baseURL: config.domain_url,
 });
 
+console.log('API Base URL:', config.domain_url);
 // Add interceptor to include Authorization header only if token exists
 api.interceptors.request.use(
   async (config) => {

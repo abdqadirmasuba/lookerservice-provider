@@ -26,8 +26,7 @@ export default function AuthLoadingScreen() {
   const checkAuthStatus = async () => {
     try {
       // Step 1: Check if user has seen onboarding
-      const hasSeenOnboarding = await AsyncStorage.getItem(ONBOARDING_KEY);
-      
+      const hasSeenOnboarding = await AsyncStorage.getItem(ONBOARDING_KEY);      
       if (!hasSeenOnboarding) {
         // First time user - show onboarding
         setTimeout(() => {
@@ -69,6 +68,7 @@ export default function AuthLoadingScreen() {
       dispatch(loginSuccess({
         token: res.data.access_token,
         refreshToken: res.data.refresh_token,
+        providerBusinesses: res.data.provider_businesses || [],
       }));
       dispatch(setUser({
         id: res.data.user.id,

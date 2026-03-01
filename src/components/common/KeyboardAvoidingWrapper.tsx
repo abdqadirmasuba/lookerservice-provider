@@ -1,5 +1,3 @@
-// File: src/components/common/KeyboardAvoidingWrapper.tsx
-
 import React from 'react';
 import {
   KeyboardAvoidingView,

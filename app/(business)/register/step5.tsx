@@ -6,8 +6,9 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   Alert,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -19,55 +20,24 @@ import {
   BuildingStorefrontIcon,
   MapPinIcon,
   PhotoIcon,
-  WrenchScrewdriverIcon,
-  PencilIcon,
+  TagIcon,
+  ClockIcon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon as CheckCircleSolid } from 'react-native-heroicons/solid';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/src/store';
+import { registerBusiness } from '@/src/utils/business';
+import { resetBusinessRegistration } from '@/src/store/slices/businessRegistrationSlice';
 
 export default function BusinessStep5Screen() {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const businessRegistration = useSelector(
+    (state: RootState) => state.businessRegistration
+  );
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-
-  // Mock data - would come from previous steps
-  const businessData = {
-    name: 'Doe Plumbing Services',
-    phone: '+256 701 234 567',
-    email: 'info@doeplumbing.com',
-    description: 'Professional plumbing services with 10+ years of experience. We handle all types of plumbing issues from repairs to installations.',
-    address: 'Plot 123, Main Street',
-    city: 'Kampala',
-    district: 'Kampala',
-    region: 'Central',
-    photos: [
-      'https://picsum.photos/400/300?random=1',
-      'https://picsum.photos/400/300?random=2',
-      'https://picsum.photos/400/300?random=3',
-    ],
-    services: [
-      {
-        id: '1',
-        name: 'Pipe Repair',
-        price: '50000',
-        priceType: 'fixed',
-        categories: ['Plumbing', 'Repairs'],
-      },
-      {
-        id: '2',
-        name: 'Bathroom Installation',
-        price: '150000',
-        priceType: 'hourly',
-        categories: ['Plumbing', 'Installation'],
-      },
-      {
-        id: '3',
-        name: 'Emergency Services',
-        price: '0',
-        priceType: 'negotiable',
-        categories: ['Plumbing', 'Repairs', 'Maintenance'],
-      },
-    ],
-  };
 
   const handleSubmit = async () => {
     if (!agreedToTerms) {
@@ -75,11 +45,49 @@ export default function BusinessStep5Screen() {
       return;
     }
 
+    // Validate required fields
+    if (!businessRegistration.business_name || !businessRegistration.business_description) {
+      Alert.alert('Error', 'Business name and description are required');
+      return;
+    }
+
+    if (!businessRegistration.latitude || !businessRegistration.longitude) {
+      Alert.alert('Error', 'Business location is required');
+      return;
+    }
+
+    if (businessRegistration.categories.length === 0) {
+      Alert.alert('Error', 'Please select at least one category');
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // TODO: Submit to API
-    setTimeout(() => {
+    try {
+      // Prepare data for submission
+      const registrationData = {
+        business_name: businessRegistration.business_name,
+        business_description: businessRegistration.business_description,
+        longitude: businessRegistration.longitude,
+        latitude: businessRegistration.latitude,
+        address: businessRegistration.address,
+        city: businessRegistration.city,
+        state_region: businessRegistration.state_region,
+        country: businessRegistration.country,
+        postal_code: businessRegistration.postal_code,
+        business_hours: businessRegistration.business_hours,
+        business_photos: businessRegistration.business_photos,
+        category_ids: businessRegistration.categories,
+      };
+
+      // Submit to API
+      await registerBusiness(registrationData);
+
+      // Reset registration state
+      dispatch(resetBusinessRegistration());
+
       setIsSubmitting(false);
+
       Alert.alert(
         'Success!',
         'Your business has been submitted for review. You will be notified once approved.',
@@ -90,17 +98,30 @@ export default function BusinessStep5Screen() {
           },
         ]
       );
-    }, 2000);
+    } catch (error: any) {
+      setIsSubmitting(false);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to register business. Please try again.'
+      );
+    }
   };
 
   const handleEdit = (step: number) => {
     router.push(`/(business)/register/step${step}` as any);
   };
 
-  const getPriceDisplay = (service: any) => {
-    if (service.priceType === 'negotiable') return 'Negotiable';
-    if (service.priceType === 'hourly') return `UGX ${service.price}/hr`;
-    return `UGX ${service.price}`;
+  const handleBack = () => {
+    router.back();
+  };
+
+  const formatBusinessHours = () => {
+    const hours = businessRegistration.business_hours;
+    if (!hours || Object.keys(hours).length === 0) {
+      return 'Not set';
+    }
+    const count = Object.keys(hours).length;
+    return `${count} ${count === 1 ? 'day' : 'days'} configured`;
   };
 
   return (
@@ -110,7 +131,7 @@ export default function BusinessStep5Screen() {
       {/* Header */}
       <View className="px-6 pt-4 pb-4 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
         <View className="flex-row items-center mb-4">
-          <TouchableOpacity onPress={() => router.back()} className="mr-4">
+          <TouchableOpacity onPress={handleBack} className="mr-4">
             <ArrowLeftIcon size={24} color="#6B7280" />
           </TouchableOpacity>
           <View className="flex-1">
@@ -153,25 +174,28 @@ export default function BusinessStep5Screen() {
               <View className="flex-row items-center">
                 <BuildingStorefrontIcon size={24} color="#F57C1F" />
                 <Text className="text-lg font-bold text-gray-900 dark:text-white ml-2">
-                  Business Details
+                  Business Information
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => handleEdit(1)}
-                className="w-8 h-8 bg-gray-100 dark:bg-[#0F172A] rounded-full items-center justify-center"
+                className="px-3 py-1 bg-gray-100 dark:bg-[#0F172A] rounded-lg"
               >
-                <PencilIcon size={16} color="#6B7280" />
+                <Text className="text-xs text-primary-500 font-semibold">Edit</Text>
               </TouchableOpacity>
             </View>
 
             <View className="space-y-3">
-              <DetailRow label="Name" value={businessData.name} />
-              <DetailRow label="Phone" value={businessData.phone} />
-              <DetailRow label="Email" value={businessData.email || 'Not provided'} />
+              <View>
+                <Text className="text-xs text-gray-500 mb-1">Business Name</Text>
+                <Text className="text-sm font-medium text-gray-900 dark:text-white">
+                  {businessRegistration.business_name}
+                </Text>
+              </View>
               <View>
                 <Text className="text-xs text-gray-500 mb-1">Description</Text>
                 <Text className="text-sm text-gray-900 dark:text-white">
-                  {businessData.description}
+                  {businessRegistration.business_description}
                 </Text>
               </View>
             </View>
@@ -187,130 +211,133 @@ export default function BusinessStep5Screen() {
                 </Text>
               </View>
               <TouchableOpacity
-                onPress={() => handleEdit(2)}
-                className="w-8 h-8 bg-gray-100 dark:bg-[#0F172A] rounded-full items-center justify-center"
+                onPress={() => handleEdit(1)}
+                className="px-3 py-1 bg-gray-100 dark:bg-[#0F172A] rounded-lg"
               >
-                <PencilIcon size={16} color="#6B7280" />
+                <Text className="text-xs text-primary-500 font-semibold">Edit</Text>
               </TouchableOpacity>
             </View>
 
-            <View className="space-y-3">
-              <DetailRow label="Address" value={businessData.address} />
-              <DetailRow label="City" value={businessData.city} />
-              <DetailRow label="District" value={businessData.district} />
-              <DetailRow label="Region" value={businessData.region} />
+            <View className="space-y-2">
+              <Text className="text-sm text-gray-900 dark:text-white font-medium">
+                {businessRegistration.address}
+              </Text>
+              <Text className="text-sm text-gray-600 dark:text-gray-400">
+                {businessRegistration.city}, {businessRegistration.state_region}
+              </Text>
+              <Text className="text-xs text-gray-500">
+                {businessRegistration.country} {businessRegistration.postal_code && `• ${businessRegistration.postal_code}`}
+              </Text>
             </View>
           </View>
 
-          {/* Photos */}
+          {/* Business Hours */}
+          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]">
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
+                <ClockIcon size={24} color="#F57C1F" />
+                <Text className="text-lg font-bold text-gray-900 dark:text-white ml-2">
+                  Business Hours
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => handleEdit(2)}
+                className="px-3 py-1 bg-gray-100 dark:bg-[#0F172A] rounded-lg"
+              >
+                <Text className="text-xs text-primary-500 font-semibold">Edit</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text className="text-sm text-gray-600 dark:text-gray-400">
+              {formatBusinessHours()}
+            </Text>
+          </View>
+
+          {/* Business Photos */}
           <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]">
             <View className="flex-row items-center justify-between mb-4">
               <View className="flex-row items-center">
                 <PhotoIcon size={24} color="#F57C1F" />
                 <Text className="text-lg font-bold text-gray-900 dark:text-white ml-2">
-                  Photos ({businessData.photos.length})
+                  Photos
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => handleEdit(3)}
-                className="w-8 h-8 bg-gray-100 dark:bg-[#0F172A] rounded-full items-center justify-center"
+                className="px-3 py-1 bg-gray-100 dark:bg-[#0F172A] rounded-lg"
               >
-                <PencilIcon size={16} color="#6B7280" />
+                <Text className="text-xs text-primary-500 font-semibold">Edit</Text>
               </TouchableOpacity>
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-2">
-              {businessData.photos.map((photo, index) => (
-                <View key={index} className="w-32 h-32 mx-2 rounded-xl overflow-hidden relative">
-                  <Image source={{ uri: photo }} className="w-full h-full" resizeMode="cover" />
-                  {index === 0 && (
-                    <View className="absolute bottom-2 left-2 bg-primary-500 px-2 py-1 rounded">
-                      <Text className="text-white text-xs font-bold">Primary</Text>
-                    </View>
-                  )}
-                </View>
-              ))}
-            </ScrollView>
+            {businessRegistration.business_photos.length > 0 ? (
+              <View className="flex-row flex-wrap -mx-1">
+                {businessRegistration.business_photos.map((photo, index) => (
+                  <View key={index} className="w-1/4 p-1">
+                    <Image
+                      source={{ uri: photo }}
+                      className="w-full aspect-square rounded-lg"
+                      resizeMode="cover"
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text className="text-sm text-gray-500">No photos added</Text>
+            )}
           </View>
 
-          {/* Services */}
+          {/* Categories */}
           <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]">
             <View className="flex-row items-center justify-between mb-4">
               <View className="flex-row items-center">
-                <WrenchScrewdriverIcon size={24} color="#F57C1F" />
+                <TagIcon size={24} color="#F57C1F" />
                 <Text className="text-lg font-bold text-gray-900 dark:text-white ml-2">
-                  Services ({businessData.services.length})
+                  Categories
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => handleEdit(4)}
-                className="w-8 h-8 bg-gray-100 dark:bg-[#0F172A] rounded-full items-center justify-center"
+                className="px-3 py-1 bg-gray-100 dark:bg-[#0F172A] rounded-lg"
               >
-                <PencilIcon size={16} color="#6B7280" />
+                <Text className="text-xs text-primary-500 font-semibold">Edit</Text>
               </TouchableOpacity>
             </View>
 
-            <View className="space-y-3">
-              {businessData.services.map((service, index) => (
-                <View
-                  key={service.id}
-                  className={`pb-3 ${
-                    index < businessData.services.length - 1
-                      ? 'border-b border-gray-200 dark:border-[#334155]'
-                      : ''
-                  }`}
-                >
-                  <Text className="font-bold text-gray-900 dark:text-white mb-1">
-                    {service.name}
-                  </Text>
-                  <Text className="text-primary-500 font-semibold text-sm mb-2">
-                    {getPriceDisplay(service)}
-                  </Text>
-                  <View className="flex-row flex-wrap">
-                    {service.categories.map((cat) => (
-                      <View
-                        key={cat}
-                        className="bg-gray-100 dark:bg-[#0F172A] px-2 py-1 rounded-lg mr-2 mb-1"
-                      >
-                        <Text className="text-xs text-gray-600 dark:text-gray-400">{cat}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ))}
-            </View>
+            <Text className="text-sm text-gray-600 dark:text-gray-400">
+              {businessRegistration.categories.length} {businessRegistration.categories.length === 1 ? 'category' : 'categories'} selected
+            </Text>
           </View>
 
-          {/* Terms Agreement */}
+          {/* Terms and Conditions */}
           <TouchableOpacity
             onPress={() => setAgreedToTerms(!agreedToTerms)}
-            className="flex-row items-start mb-6"
+            className="flex-row items-start bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]"
           >
             <View className="mr-3 mt-0.5">
               {agreedToTerms ? (
                 <CheckCircleSolid size={24} color="#F57C1F" />
               ) : (
-                <View className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-[#334155]" />
+                <View className="w-6 h-6 border-2 border-gray-300 dark:border-[#334155] rounded-full" />
               )}
             </View>
-            <Text className="flex-1 text-sm text-gray-600 dark:text-gray-400">
-              I confirm that all information provided is accurate and I agree to the{' '}
-              <Text className="text-primary-500 font-semibold">Terms & Conditions</Text>
-              {' '}and{' '}
-              <Text className="text-primary-500 font-semibold">Service Provider Agreement</Text>
-            </Text>
+            <View className="flex-1">
+              <Text className="text-sm text-gray-900 dark:text-white">
+                I agree to the{' '}
+                <Text className="text-primary-500 font-semibold">Terms and Conditions</Text>
+                {' '}and{' '}
+                <Text className="text-primary-500 font-semibold">Privacy Policy</Text>
+              </Text>
+            </View>
           </TouchableOpacity>
 
           {/* Info Box */}
-          <View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800 mb-6">
+          <View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
             <Text className="text-blue-700 dark:text-blue-400 text-sm font-semibold mb-1">
-              📝 What happens next?
+              📋 Next Steps
             </Text>
             <Text className="text-blue-600 dark:text-blue-300 text-xs">
-              • Your business will be reviewed by our team (usually within 24-48 hours){'\n'}
-              • You'll receive a notification once approved{'\n'}
-              • After approval, your business will be visible to clients{'\n'}
-              • You can start receiving booking requests immediately
+              After submission, your business will be reviewed by our team. You'll receive a notification once approved, typically within 24-48 hours.
             </Text>
           </View>
         </View>
@@ -318,28 +345,32 @@ export default function BusinessStep5Screen() {
 
       {/* Bottom Navigation */}
       <View className="px-6 py-4 bg-white dark:bg-[#1E293B] border-t border-gray-200 dark:border-[#334155]">
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={isSubmitting || !agreedToTerms}
-          className={`py-4 rounded-xl items-center ${
-            isSubmitting || !agreedToTerms ? 'bg-gray-300 dark:bg-gray-700' : 'bg-primary-500'
-          }`}
-        >
-          <Text className="text-white font-bold text-base">
-            {isSubmitting ? 'Submitting...' : 'Submit for Review'}
-          </Text>
-        </TouchableOpacity>
+        {isSubmitting ? (
+          <View className="py-4 items-center">
+            <ActivityIndicator size="large" color="#F57C1F" />
+            <Text className="text-gray-600 dark:text-gray-400 mt-2">
+              Submitting your business...
+            </Text>
+          </View>
+        ) : (
+          <View className="flex-row space-x-3">
+            <TouchableOpacity
+              onPress={handleBack}
+              className="flex-1 bg-gray-100 dark:bg-[#0F172A] border border-gray-300 dark:border-[#334155] py-4 rounded-xl items-center"
+            >
+              <Text className="text-gray-700 dark:text-gray-300 font-bold">Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              className="flex-1 bg-primary-500 py-4 rounded-xl items-center"
+              disabled={!agreedToTerms}
+              style={{ opacity: agreedToTerms ? 1 : 0.5 }}
+            >
+              <Text className="text-white font-bold">Submit Business</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </SafeAreaView>
-  );
-}
-
-// Helper Component
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View>
-      <Text className="text-xs text-gray-500 mb-1">{label}</Text>
-      <Text className="text-sm text-gray-900 dark:text-white">{value}</Text>
-    </View>
   );
 }

@@ -1,5 +1,3 @@
-// File: app/(tabs)/_layout.tsx
-
 import { Tabs } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import {
@@ -28,12 +26,12 @@ export default function TabLayout() {
         tabBarActiveTintColor: '#F57C1F',
         tabBarInactiveTintColor: isDark ? '#94A3B8' : '#6B7280',
         tabBarStyle: {
-          backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-          borderTopColor: isDark ? '#334155' : '#E5E7EB',
-          borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          // backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+          // borderTopColor: isDark ? '#334155' : '#E5E7EB',
+          // borderTopWidth: 1,
+          // height: 60,
+          // paddingBottom: 8,
+          // paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 12,

@@ -19,30 +19,82 @@ import {
   XMarkIcon,
   CameraIcon,
 } from 'react-native-heroicons/outline';
+import * as ImagePicker from 'expo-image-picker';
+import { useDispatch, useSelector } from 'react-redux';
+import { setBusinessPhotos, removeBusinessPhoto } from '@/src/store/slices/businessRegistrationSlice';
+import { RootState } from '@/src/store';
 
 export default function BusinessStep3Screen() {
   const router = useRouter();
-  const [photos, setPhotos] = useState<string[]>([]);
+  const dispatch = useDispatch();
+  const businessRegistration = useSelector(
+    (state: RootState) => state.businessRegistration
+  );
+  const [photos, setPhotos] = useState<string[]>(businessRegistration.business_photos);
 
-  const handlePickImage = () => {
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant access to your photo library');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const newPhotos = [...photos, result.assets[0].uri];
+      if (newPhotos.length > 10) {
+        Alert.alert('Limit Reached', 'You can only add up to 10 photos');
+        return;
+      }
+      setPhotos(newPhotos);
+      dispatch(setBusinessPhotos(newPhotos));
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant access to your camera');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const newPhotos = [...photos, result.assets[0].uri];
+      if (newPhotos.length > 10) {
+        Alert.alert('Limit Reached', 'You can only add up to 10 photos');
+        return;
+      }
+      setPhotos(newPhotos);
+      dispatch(setBusinessPhotos(newPhotos));
+    }
+  };
+
+  const showImagePickerOptions = () => {
     Alert.alert(
       'Add Photo',
       'Choose photo source',
       [
         {
           text: 'Camera',
-          onPress: () => {
-            // TODO: Open camera
-            Alert.alert('Camera', 'Camera will open here');
-          },
+          onPress: handleTakePhoto,
         },
         {
           text: 'Gallery',
-          onPress: () => {
-            // TODO: Open gallery
-            const mockPhoto = `https://picsum.photos/400/300?random=${Date.now()}`;
-            setPhotos([...photos, mockPhoto]);
-          },
+          onPress: handlePickImage,
         },
         { text: 'Cancel', style: 'cancel' },
       ]
@@ -52,16 +104,22 @@ export default function BusinessStep3Screen() {
   const handleRemovePhoto = (index: number) => {
     const newPhotos = photos.filter((_, i) => i !== index);
     setPhotos(newPhotos);
+    dispatch(setBusinessPhotos(newPhotos));
   };
 
   const handleNext = () => {
+    // Photos are optional, so we can proceed even if there are none
     if (photos.length === 0) {
       Alert.alert(
-        'Add Photos',
-        'Please add at least one photo of your business',
+        'No Photos',
+        'Adding photos helps clients trust your business. Skip for now?',
         [
-          { text: 'Skip', onPress: () => router.push('/(business)/register/step4') },
-          { text: 'Add Photo', onPress: handlePickImage },
+          { text: 'Add Photos', onPress: showImagePickerOptions },
+          { 
+            text: 'Skip', 
+            onPress: () => router.push('/(business)/register/step4'),
+            style: 'cancel',
+          },
         ]
       );
       return;
@@ -123,8 +181,9 @@ export default function BusinessStep3Screen() {
             {/* Add Photo Button */}
             <View className="w-1/2 p-2">
               <TouchableOpacity
-                onPress={handlePickImage}
+                onPress={showImagePickerOptions}
                 className="aspect-square bg-white dark:bg-[#1E293B] border-2 border-dashed border-gray-300 dark:border-[#334155] rounded-2xl items-center justify-center"
+                disabled={photos.length >= 10}
               >
                 <View className="items-center">
                   <View className="w-14 h-14 bg-primary-50 dark:bg-primary-900/20 rounded-full items-center justify-center mb-2">
@@ -236,7 +295,7 @@ export default function BusinessStep3Screen() {
             onPress={handleNext}
             className="flex-1 bg-primary-500 py-4 rounded-xl items-center"
           >
-            <Text className="text-white font-bold">Next: Services</Text>
+            <Text className="text-white font-bold">Next: Categories</Text>
           </TouchableOpacity>
         </View>
       </View>

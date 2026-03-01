@@ -1,6 +1,5 @@
 // File: app/(business)/register/step1.tsx
 
-
 import React, { useState } from 'react';
 import {
   View,
@@ -9,8 +8,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -19,19 +16,42 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeftIcon,
   BuildingStorefrontIcon,
-  PhoneIcon,
-  EnvelopeIcon,
   DocumentTextIcon,
+  MapPinIcon,
 } from 'react-native-heroicons/outline';
+import { useDispatch, useSelector } from 'react-redux';
 import KeyboardAvoidingWrapper from '@/src/components/common/KeyboardAvoidingWrapper';
+import LocationPicker from '@/src/components/forms/LocationPicker';
+import { setBusinessInfo, setLocation } from '@/src/store/slices/businessRegistrationSlice';
+import { RootState } from '@/src/store';
 
 export default function BusinessStep1Screen() {
   const router = useRouter();
-  const [businessName, setBusinessName] = useState('');
-  const [businessPhone, setBusinessPhone] = useState('');
-  const [businessEmail, setBusinessEmail] = useState('');
-  const [description, setDescription] = useState('');
+  const dispatch = useDispatch();
+  const businessRegistration = useSelector(
+    (state: RootState) => state.businessRegistration
+  );
 
+  const [businessName, setBusinessName] = useState(
+    businessRegistration.business_name
+  );
+  const [description, setDescription] = useState(
+    businessRegistration.business_description
+  );
+  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<any>(
+    businessRegistration.latitude && businessRegistration.longitude
+      ? {
+          latitude: businessRegistration.latitude,
+          longitude: businessRegistration.longitude,
+          address: businessRegistration.address,
+          city: businessRegistration.city,
+          state_region: businessRegistration.state_region,
+          country: businessRegistration.country,
+          postal_code: businessRegistration.postal_code,
+        }
+      : null
+  );
 
   const handleNext = () => {
     // Validation
@@ -39,17 +59,29 @@ export default function BusinessStep1Screen() {
       Alert.alert('Required', 'Please enter your business name');
       return;
     }
-    if (!businessPhone.trim()) {
-      Alert.alert('Required', 'Please enter your business phone number');
-      return;
-    }
     if (!description.trim()) {
       Alert.alert('Required', 'Please enter a business description');
       return;
     }
+    if (!selectedLocation) {
+      Alert.alert('Required', 'Please select your business location');
+      return;
+    }
 
-    // TODO: Save to state/storage
+    // Save to Redux store
+    dispatch(
+      setBusinessInfo({
+        business_name: businessName,
+        business_description: description,
+      })
+    );
+    dispatch(setLocation(selectedLocation));
+
     router.push('/(business)/register/step2');
+  };
+
+  const handleLocationSelect = (location: any) => {
+    setSelectedLocation(location);
   };
 
   return (
@@ -90,10 +122,10 @@ export default function BusinessStep1Screen() {
                 <BuildingStorefrontIcon size={40} color="#FFFFFF" />
               </LinearGradient>
               <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Business Details
+                Business Information
               </Text>
               <Text className="text-sm text-center text-gray-600 dark:text-gray-400 px-8">
-                Tell us about your business
+                Tell us about your business and where it's located
               </Text>
             </View>
 
@@ -107,48 +139,10 @@ export default function BusinessStep1Screen() {
                 <View className="flex-row items-center bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4">
                   <BuildingStorefrontIcon size={20} color="#6B7280" />
                   <TextInput
-                    placeholder="e.g., Doe Plumbing Services"
+                    placeholder="e.g., Manyangwa Cleaners"
                     placeholderTextColor="#6B7280"
                     value={businessName}
                     onChangeText={setBusinessName}
-                    className="flex-1 py-4 ml-3 text-gray-900 dark:text-white"
-                  />
-                </View>
-              </View>
-
-              {/* Business Phone */}
-              <View>
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Business Phone Number <Text className="text-red-500">*</Text>
-                </Text>
-                <View className="flex-row items-center bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4">
-                  <PhoneIcon size={20} color="#6B7280" />
-                  <Text className="ml-3 text-gray-600 dark:text-gray-400">+256</Text>
-                  <TextInput
-                    placeholder="701 234 567"
-                    placeholderTextColor="#6B7280"
-                    value={businessPhone}
-                    onChangeText={setBusinessPhone}
-                    keyboardType="phone-pad"
-                    className="flex-1 py-4 ml-2 text-gray-900 dark:text-white"
-                  />
-                </View>
-              </View>
-
-              {/* Business Email (Optional) */}
-              <View>
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Business Email (Optional)
-                </Text>
-                <View className="flex-row items-center bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4">
-                  <EnvelopeIcon size={20} color="#6B7280" />
-                  <TextInput
-                    placeholder="business@example.com"
-                    placeholderTextColor="#6B7280"
-                    value={businessEmail}
-                    onChangeText={setBusinessEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
                     className="flex-1 py-4 ml-3 text-gray-900 dark:text-white"
                   />
                 </View>
@@ -178,13 +172,46 @@ export default function BusinessStep1Screen() {
                 </Text>
               </View>
 
+              {/* Location */}
+              <View>
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Business Location <Text className="text-red-500">*</Text>
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setLocationPickerVisible(true)}
+                  className="flex-row items-center bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4 py-4"
+                >
+                  <MapPinIcon size={20} color="#6B7280" />
+                  <View className="flex-1 ml-3">
+                    {selectedLocation ? (
+                      <>
+                        <Text className="text-gray-900 dark:text-white font-medium">
+                          {selectedLocation.address}
+                        </Text>
+                        <Text className="text-xs text-gray-500 mt-1">
+                          {selectedLocation.city}, {selectedLocation.state_region}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text className="text-gray-500">Tap to select location</Text>
+                    )}
+                  </View>
+                  <Text className="text-primary-500 font-medium">
+                    {selectedLocation ? 'Change' : 'Select'}
+                  </Text>
+                </TouchableOpacity>
+                <Text className="text-xs text-gray-500 mt-1">
+                  Use map to pick your exact business location
+                </Text>
+              </View>
+
               {/* Info Box */}
               <View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
                 <Text className="text-blue-700 dark:text-blue-400 text-sm font-semibold mb-1">
                   💡 Tip
                 </Text>
                 <Text className="text-blue-600 dark:text-blue-300 text-xs">
-                  A detailed description helps clients understand your services better and increases booking chances.
+                  A clear description and precise location helps clients find and trust your business more easily.
                 </Text>
               </View>
             </View>
@@ -198,10 +225,20 @@ export default function BusinessStep1Screen() {
             className="bg-primary-500 py-4 rounded-xl items-center"
             activeOpacity={0.8}
           >
-            <Text className="text-white font-bold text-base">Next: Location</Text>
+            <Text className="text-white font-bold text-base">
+              Next: Business Hours
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingWrapper>
+
+      {/* Location Picker Modal */}
+      <LocationPicker
+        visible={locationPickerVisible}
+        onClose={() => setLocationPickerVisible(false)}
+        onSelect={handleLocationSelect}
+        initialLocation={selectedLocation}
+      />
     </SafeAreaView>
   );
 }

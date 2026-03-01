@@ -1,17 +1,22 @@
 // File: app/(tabs)/index.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/store';
+import { apiRequests } from '@/src/utils/apiRequest';
+import { showErrorAlert } from '@/src/utils/alerts';
 import {
   BellIcon,
   PlusCircleIcon,
@@ -21,66 +26,78 @@ import {
   ChartBarIcon,
   MapPinIcon,
   StarIcon,
+  XCircleIcon,
+  XMarkIcon,
 } from 'react-native-heroicons/outline';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedBusiness, setSelectedBusiness] = useState<string | null>(null);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Get provider businesses from Redux
+  const providerBusinesses = useSelector((state: RootState) => state.auth.providerBusinesses);
+  const userData = useSelector((state: RootState) => state.user.user);
 
-  // Mock data
-  const userData = {
-    fullName: 'John Doe',
-    businesses: [
-      { id: '1', name: 'Doe Plumbing Services', status: 'active' },
-      { id: '2', name: 'Emergency Repairs Ltd', status: 'active' },
-    ],
+  // Fetch dashboard data
+  const fetchDashboardData = async (providerId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequests.get(`/provider/dashboard/${providerId}`);
+      if (response.data.success) {
+        setDashboardData(response.data.data);
+      } else {
+        showErrorAlert('Error', response.data.message || 'Failed to fetch dashboard data');
+      }
+    } catch (error: any) {
+      console.error('Dashboard fetch error:', error);
+      showErrorAlert('Error', 'Failed to fetch dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const stats = {
-    pendingRequests: 5,
-    activeBookings: 3,
-    completedToday: 2,
-    monthlyEarnings: 1250000,
-  };
+  // Initialize with first business
+  useEffect(() => {
+    if (providerBusinesses && providerBusinesses.length > 0) {
+      const firstBusinessId = providerBusinesses[0].id;
+      setSelectedBusinessId(firstBusinessId);
+      fetchDashboardData(firstBusinessId);
+    }
+  }, []);
 
-  const recentBookings = [
-    {
-      id: '1',
-      clientName: 'Alice Nambi',
-      service: 'Pipe Repair',
-      time: '2 hours ago',
-      status: 'pending',
-    },
-    {
-      id: '2',
-      clientName: 'Bob Okello',
-      service: 'Bathroom Installation',
-      time: '5 hours ago',
-      status: 'active',
-    },
-    {
-      id: '3',
-      clientName: 'Carol Atim',
-      service: 'Water Heater Fix',
-      time: '1 day ago',
-      status: 'completed',
-    },
-  ];
+  // Fetch data when selected business changes
+  useEffect(() => {
+    if (selectedBusinessId) {
+      fetchDashboardData(selectedBusinessId);
+    }
+  }, [selectedBusinessId]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 2000);
-  }, []);
+    if (selectedBusinessId) {
+      fetchDashboardData(selectedBusinessId).finally(() => setRefreshing(false));
+    } else {
+      setRefreshing(false);
+    }
+  }, [selectedBusinessId]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
         return '#F59E0B';
+      case 'accepted':
+        return '#2DA9E9';
       case 'active':
         return '#2DA9E9';
       case 'completed':
         return '#10B981';
+      case 'rejected':
+        return '#EF4444';
+      case 'cancelled':
+        return '#DC2626';
       default:
         return '#6B7280';
     }
@@ -108,7 +125,7 @@ export default function DashboardScreen() {
           <View className="flex-row items-center justify-between mb-6">
             <View>
               <Text className="text-white/80 text-sm">Welcome back,</Text>
-              <Text className="text-white text-xl font-bold mt-1">{userData.fullName}</Text>
+              <Text className="text-white text-xl font-bold mt-1">{userData?.fullName || 'Provider'}</Text>
             </View>
             <TouchableOpacity
               onPress={() => router.push('/(notifications)')}
@@ -122,32 +139,44 @@ export default function DashboardScreen() {
           </View>
 
           {/* Business Selector */}
-          {userData.businesses.length > 1 && (
+          {providerBusinesses && providerBusinesses.length > 1 && (
             <View className="mb-4">
               <Text className="text-white/80 text-xs mb-2">Active Business</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {userData.businesses.map((business) => (
+                {providerBusinesses.map((business) => (
                   <TouchableOpacity
                     key={business.id}
-                    onPress={() => setSelectedBusiness(business.id)}
+                    onPress={() => setSelectedBusinessId(business.id)}
                     className={`mr-3 px-4 py-2 rounded-full ${
-                      selectedBusiness === business.id || (!selectedBusiness && business.id === '1')
+                      selectedBusinessId === business.id
                         ? 'bg-white'
                         : 'bg-white/20'
                     }`}
                   >
                     <Text
                       className={`text-sm font-semibold ${
-                        selectedBusiness === business.id || (!selectedBusiness && business.id === '1')
+                        selectedBusinessId === business.id
                           ? 'text-primary-500'
                           : 'text-white'
                       }`}
                     >
-                      {business.name}
+                      {business.business_name}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+            </View>
+          )}
+
+          {/* Single Business Display */}
+          {providerBusinesses && providerBusinesses.length === 1 && (
+            <View className="mb-4">
+              <Text className="text-white/80 text-xs mb-2">Business</Text>
+              <View className="bg-white rounded-full px-4 py-2 self-start">
+                <Text className="text-primary-500 font-semibold text-sm">
+                  {providerBusinesses[0].business_name}
+                </Text>
+              </View>
             </View>
           )}
 
@@ -170,29 +199,57 @@ export default function DashboardScreen() {
 
         {/* Stats Grid */}
         <View className="px-6 -mt-4">
-          <View className="flex-row flex-wrap -mx-2">
-            <StatCard
-              icon={<ClockIcon size={24} color="#F59E0B" />}
-              label="Pending"
-              value={stats.pendingRequests.toString()}
-            />
-            <StatCard
-              icon={<CheckCircleIcon size={24} color="#2DA9E9" />}
-              label="Active"
-              value={stats.activeBookings.toString()}
-            />
-            <StatCard
-              icon={<ChartBarIcon size={24} color="#10B981" />}
-              label="Completed"
-              value={stats.completedToday.toString()}
-            />
-            <StatCard
-              icon={<CurrencyDollarIcon size={24} color="#F57C1F" />}
-              label="Earnings"
-              value={formatCurrency(stats.monthlyEarnings)}
-              isLarge
-            />
-          </View>
+          {isLoading && !dashboardData ? (
+            <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
+              <ActivityIndicator size="large" color="#F57C1F" />
+              <Text className="text-gray-500 mt-2">Loading dashboard...</Text>
+            </View>
+          ) : dashboardData ? (
+            <>
+              <View className="flex-row flex-wrap -mx-2">
+                <StatCard
+                  icon={<ClockIcon size={24} color="#F59E0B" />}
+                  label="Pending"
+                  value={dashboardData.stats.pending_bookings.toString()}
+                />
+                <StatCard
+                  icon={<CheckCircleIcon size={24} color="#2DA9E9" />}
+                  label="Accepted"
+                  value={dashboardData.stats.accepted_bookings.toString()}
+                />
+                <StatCard
+                  icon={<ChartBarIcon size={24} color="#10B981" />}
+                  label="Active"
+                  value={dashboardData.stats.active_bookings.toString()}
+                />
+                <StatCard
+                  icon={<CheckCircleIcon size={24} color="#059669" />}
+                  label="Completed"
+                  value={dashboardData.stats.completed_bookings.toString()}
+                />
+                <StatCard
+                  icon={<XCircleIcon size={24} color="#EF4444" />}
+                  label="Rejected"
+                  value={dashboardData.stats.rejected_bookings.toString()}
+                />
+                <StatCard
+                  icon={<XMarkIcon size={24} color="#DC2626" />}
+                  label="Cancelled"
+                  value={dashboardData.stats.cancelled_bookings.toString()}
+                />
+                <StatCard
+                  icon={<CurrencyDollarIcon size={24} color="#F57C1F" />}
+                  label="Total Earnings"
+                  value={formatCurrency(dashboardData.stats.total_earnings)}
+                  isLarge
+                />
+              </View>
+            </>
+          ) : (
+            <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
+              <Text className="text-gray-500">No business selected</Text>
+            </View>
+          )}
         </View>
 
         {/* Recent Bookings */}
@@ -206,45 +263,60 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
 
-          {recentBookings.map((booking) => (
-            <TouchableOpacity
-              key={booking.id}
-              onPress={() => router.push(`/(bookings)/${booking.id}`)}
-              className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 shadow-sm"
-            >
-              <View className="flex-row items-start">
-                <View className="w-12 h-12 bg-primary-50 rounded-full items-center justify-center mr-3">
-                  <Text className="text-primary-500 font-bold text-lg">
-                    {booking.clientName.charAt(0)}
-                  </Text>
-                </View>
-                <View className="flex-1">
-                  <View className="flex-row items-center justify-between mb-1">
-                    <Text className="font-bold text-gray-900 dark:text-white">
-                      {booking.clientName}
+          {isLoading && !dashboardData ? (
+            <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
+              <ActivityIndicator size="small" color="#F57C1F" />
+            </View>
+          ) : dashboardData && dashboardData.recent_bookings && dashboardData.recent_bookings.length > 0 ? (
+            dashboardData.recent_bookings.map((booking: any) => (
+              <TouchableOpacity
+                key={booking.id}
+                onPress={() => router.push(`/(bookings)/${booking.id}`)}
+                className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 shadow-sm"
+              >
+                <View className="flex-row items-start">
+                  <View className="w-12 h-12 bg-primary-50 rounded-full items-center justify-center mr-3">
+                    <Text className="text-primary-500 font-bold text-lg">
+                      {booking.client_name.charAt(0)}
                     </Text>
-                    <View
-                      className="px-3 py-1 rounded-full"
-                      style={{ backgroundColor: `${getStatusColor(booking.status)}20` }}
-                    >
-                      <Text
-                        className="text-xs font-semibold capitalize"
-                        style={{ color: getStatusColor(booking.status) }}
+                  </View>
+                  <View className="flex-1">
+                    <View className="flex-row items-center justify-between mb-1">
+                      <Text className="font-bold text-gray-900 dark:text-white">
+                        {booking.client_name}
+                      </Text>
+                      <View
+                        className="px-3 py-1 rounded-full"
+                        style={{ backgroundColor: `${getStatusColor(booking.status)}20` }}
                       >
-                        {booking.status}
+                        <Text
+                          className="text-xs font-semibold capitalize"
+                          style={{ color: getStatusColor(booking.status) }}
+                        >
+                          {booking.status}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text className="text-sm mb-1 text-gray-700 dark:text-gray-300">
+                      {booking.service_title}
+                    </Text>
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-xs text-gray-500">
+                        {booking.booking_number}
+                      </Text>
+                      <Text className="text-sm font-semibold text-primary-500">
+                        {formatCurrency(booking.agreed_amount)}
                       </Text>
                     </View>
                   </View>
-                  <Text className="text-sm mb-1 text-gray-700 dark:text-gray-300">
-                    {booking.service}
-                  </Text>
-                  <Text className="text-xs text-gray-500">
-                    {booking.time}
-                  </Text>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
+              <Text className="text-gray-500">No recent bookings</Text>
+            </View>
+          )}
         </View>
 
         {/* Quick Links */}
@@ -299,7 +371,7 @@ function StatCard({
           {icon}
           <Text className="text-gray-500 text-xs ml-2 flex-1">{label}</Text>
         </View>
-        <Text className={`text-2xl font-bold text-gray-900 dark:text-white ${isLarge ? 'text-base' : ''}`}>
+        <Text className="text-2xl font-bold text-gray-900 dark:text-white">
           {value}
         </Text>
       </View>

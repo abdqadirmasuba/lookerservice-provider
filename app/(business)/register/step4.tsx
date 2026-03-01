@@ -1,13 +1,14 @@
 // File: app/(business)/register/step4.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -15,96 +16,94 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeftIcon,
-  WrenchScrewdriverIcon,
-  PlusIcon,
-  XMarkIcon,
+  TagIcon,
   CheckIcon,
+  XMarkIcon,
 } from 'react-native-heroicons/outline';
+import { CheckCircleIcon } from 'react-native-heroicons/solid';
+import { useDispatch, useSelector } from 'react-redux';
+import { setCategories } from '@/src/store/slices/businessRegistrationSlice';
+import { RootState } from '@/src/store';
+import { getActiveCategories } from '@/src/utils/business';
 
-interface Service {
+interface Category {
   id: string;
   name: string;
-  price: string;
-  priceType: 'fixed' | 'hourly' | 'negotiable';
-  categories: string[];
+  description: string;
+  icon_url: string;
+  sort_order: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function BusinessStep4Screen() {
   const router = useRouter();
-  const [services, setServices] = useState<Service[]>([]);
-  const [serviceName, setServiceName] = useState('');
-  const [servicePrice, setServicePrice] = useState('');
-  const [priceType, setPriceType] = useState<'fixed' | 'hourly' | 'negotiable'>('fixed');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const dispatch = useDispatch();
+  const businessRegistration = useSelector(
+    (state: RootState) => state.businessRegistration
+  );
 
-  // Mock categories
-  const availableCategories = [
-    'Plumbing',
-    'Electrical',
-    'Carpentry',
-    'Painting',
-    'Cleaning',
-    'Repairs',
-    'Installation',
-    'Maintenance',
-  ];
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    businessRegistration.categories
+  );
+  const [categories, setCategoriesList] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({});
 
-  const handleAddService = () => {
-    if (!serviceName.trim()) {
-      Alert.alert('Required', 'Please enter a service name');
-      return;
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getActiveCategories();
+      setCategoriesList(response.data || response);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load categories');
+      Alert.alert('Error', 'Failed to load categories. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    if (selectedCategories.includes(categoryId)) {
+      setSelectedCategories(selectedCategories.filter((id) => id !== categoryId));
+    } else {
+      setSelectedCategories([...selectedCategories, categoryId]);
+    }
+  };
+
+  const removeCategory = (categoryId: string) => {
+    setSelectedCategories(selectedCategories.filter((id) => id !== categoryId));
+  };
+
+  const getSelectedCategoryObjects = () => {
+    return categories.filter(cat => selectedCategories.includes(cat.id));
+  };
+
+  const handleImageError = (categoryId: string) => {
+    setImageErrors(prev => ({ ...prev, [categoryId]: true }));
+  };
+
+  const handleNext = () => {
     if (selectedCategories.length === 0) {
       Alert.alert('Required', 'Please select at least one category');
       return;
     }
 
-    const newService: Service = {
-      id: Date.now().toString(),
-      name: serviceName,
-      price: servicePrice || '0',
-      priceType,
-      categories: selectedCategories,
-    };
-
-    setServices([...services, newService]);
-    setServiceName('');
-    setServicePrice('');
-    setPriceType('fixed');
-    setSelectedCategories([]);
-
-    Alert.alert('Success', 'Service added successfully!');
-  };
-
-  const handleRemoveService = (id: string) => {
-    setServices(services.filter((s) => s.id !== id));
-  };
-
-  const toggleCategory = (category: string) => {
-    if (selectedCategories.includes(category)) {
-      setSelectedCategories(selectedCategories.filter((c) => c !== category));
-    } else {
-      setSelectedCategories([...selectedCategories, category]);
-    }
-  };
-
-  const handleNext = () => {
-    if (services.length === 0) {
-      Alert.alert('Required', 'Please add at least one service');
-      return;
-    }
+    // Save to Redux store
+    dispatch(setCategories(selectedCategories));
 
     router.push('/(business)/register/step5');
   };
 
   const handleBack = () => {
     router.back();
-  };
-
-  const getPriceDisplay = (service: Service) => {
-    if (service.priceType === 'negotiable') return 'Negotiable';
-    if (service.priceType === 'hourly') return `UGX ${service.price}/hr`;
-    return `UGX ${service.price}`;
   };
 
   return (
@@ -141,163 +140,162 @@ export default function BusinessStep4Screen() {
               colors={['#F57C1F', '#E06A0F']}
               className="w-20 h-20 rounded-full items-center justify-center mb-4"
             >
-              <WrenchScrewdriverIcon size={40} color="#FFFFFF" />
+              <TagIcon size={40} color="#FFFFFF" />
             </LinearGradient>
             <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Your Services
+              Business Categories
             </Text>
             <Text className="text-sm text-center text-gray-600 dark:text-gray-400 px-8">
-              Add the services you offer
+              Select the categories your business operates in
             </Text>
           </View>
 
-          {/* Add Service Form */}
-          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-6 border border-gray-200 dark:border-[#334155]">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              Add New Service
-            </Text>
-
-            {/* Service Name */}
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Service Name
+          {/* Loading State */}
+          {loading && (
+            <View className="py-12 items-center">
+              <ActivityIndicator size="large" color="#F57C1F" />
+              <Text className="text-gray-600 dark:text-gray-400 mt-4">
+                Loading categories...
               </Text>
-              <TextInput
-                placeholder="e.g., Pipe Repair, Bathroom Installation"
-                placeholderTextColor="#6B7280"
-                value={serviceName}
-                onChangeText={setServiceName}
-                className="bg-gray-50 dark:bg-[#0F172A] border border-gray-300 dark:border-[#334155] rounded-xl px-4 py-3 text-gray-900 dark:text-white"
-              />
             </View>
+          )}
 
-            {/* Price Type */}
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Pricing Type
+          {/* Error State */}
+          {error && !loading && (
+            <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800 mb-6">
+              <Text className="text-red-700 dark:text-red-400 text-center mb-3">
+                {error}
               </Text>
-              <View className="flex-row space-x-2">
-                {(['fixed', 'hourly', 'negotiable'] as const).map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    onPress={() => setPriceType(type)}
-                    className={`flex-1 py-3 rounded-xl border ${
-                      priceType === type
-                        ? 'bg-primary-500 border-primary-500'
-                        : 'bg-white dark:bg-[#0F172A] border-gray-300 dark:border-[#334155]'
-                    }`}
-                  >
-                    <Text
-                      className={`text-center font-semibold capitalize ${
-                        priceType === type ? 'text-white' : 'text-gray-600 dark:text-gray-400'
-                      }`}
-                    >
-                      {type}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Price Input */}
-            {priceType !== 'negotiable' && (
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Price (UGX) {priceType === 'hourly' && '/ hour'}
+              <TouchableOpacity
+                onPress={fetchCategories}
+                className="bg-red-600 py-2 px-4 rounded-lg"
+              >
+                <Text className="text-white text-center font-semibold">
+                  Retry
                 </Text>
-                <TextInput
-                  placeholder="Enter price"
-                  placeholderTextColor="#6B7280"
-                  value={servicePrice}
-                  onChangeText={setServicePrice}
-                  keyboardType="numeric"
-                  className="bg-gray-50 dark:bg-[#0F172A] border border-gray-300 dark:border-[#334155] rounded-xl px-4 py-3 text-gray-900 dark:text-white"
-                />
-              </View>
-            )}
+              </TouchableOpacity>
+            </View>
+          )}
 
-            {/* Categories */}
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Categories
+          {/* Selected Categories Chips */}
+          {!loading && selectedCategories.length > 0 && (
+            <View className="mb-6">
+              <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                Selected Categories ({selectedCategories.length})
               </Text>
               <View className="flex-row flex-wrap -mx-1">
-                {availableCategories.map((category) => (
-                  <TouchableOpacity
-                    key={category}
-                    onPress={() => toggleCategory(category)}
-                    className={`m-1 px-3 py-2 rounded-full border ${
-                      selectedCategories.includes(category)
-                        ? 'bg-primary-500 border-primary-500'
-                        : 'bg-white dark:bg-[#0F172A] border-gray-300 dark:border-[#334155]'
-                    }`}
-                  >
-                    <View className="flex-row items-center">
-                      {selectedCategories.includes(category) && (
-                        <CheckIcon size={14} color="#FFFFFF" />
-                      )}
-                      <Text
-                        className={`text-sm font-medium ${
-                          selectedCategories.includes(category)
-                            ? 'text-white ml-1'
-                            : 'text-gray-600 dark:text-gray-400'
-                        }`}
-                      >
-                        {category}
+                {getSelectedCategoryObjects().map((category) => (
+                  <View key={category.id} className="px-1 mb-2">
+                    <View className="bg-primary-500 rounded-full px-4 py-2 flex-row items-center">
+                      <Text className="text-white font-semibold text-sm mr-2">
+                        {category.name}
                       </Text>
+                      <TouchableOpacity
+                        onPress={() => removeCategory(category.id)}
+                        className="bg-white/20 rounded-full p-0.5"
+                      >
+                        <XMarkIcon size={16} color="#FFFFFF" strokeWidth={2.5} />
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
+                  </View>
                 ))}
               </View>
             </View>
+          )}
 
-            {/* Add Button */}
-            <TouchableOpacity
-              onPress={handleAddService}
-              className="bg-primary-500 py-3 rounded-xl flex-row items-center justify-center"
-            >
-              <PlusIcon size={20} color="#FFFFFF" />
-              <Text className="text-white font-bold ml-2">Add Service</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Services List */}
-          {services.length > 0 && (
+          {/* Categories List */}
+          {!loading && !error && categories.length > 0 && (
             <View>
-              <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-                Added Services ({services.length})
+              <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                Available Categories
               </Text>
-              {services.map((service) => (
-                <View
-                  key={service.id}
-                  className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-gray-200 dark:border-[#334155]"
-                >
-                  <View className="flex-row items-start justify-between mb-2">
-                    <Text className="text-base font-bold text-gray-900 dark:text-white flex-1">
-                      {service.name}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveService(service.id)}
-                      className="w-8 h-8 bg-red-50 dark:bg-red-900/20 rounded-full items-center justify-center"
-                    >
-                      <XMarkIcon size={18} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                  <Text className="text-primary-500 font-bold mb-2">
-                    {getPriceDisplay(service)}
-                  </Text>
-                  <View className="flex-row flex-wrap">
-                    {service.categories.map((cat) => (
-                      <View
-                        key={cat}
-                        className="bg-gray-100 dark:bg-[#0F172A] px-2 py-1 rounded-lg mr-2 mb-2"
-                      >
-                        <Text className="text-xs text-gray-600 dark:text-gray-400">{cat}</Text>
+              {categories.map((category) => {
+                const isSelected = selectedCategories.includes(category.id);
+                return (
+                  <TouchableOpacity
+                    key={category.id}
+                    onPress={() => toggleCategory(category.id)}
+                    className={`mb-3 rounded-2xl border-2 p-4 ${
+                      isSelected
+                        ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500'
+                        : 'bg-white dark:bg-[#1E293B] border-gray-200 dark:border-[#334155]'
+                    }`}
+                  >
+                    <View className="flex-row items-start">
+                      {/* Category Icon */}
+                      <View className="mr-3">
+                        {category.icon_url && !imageErrors[category.id] ? (
+                          <Image
+                            source={{ uri: category.icon_url }}
+                            className="w-12 h-12 rounded-xl"
+                            resizeMode="cover"
+                            onError={() => handleImageError(category.id)}
+                          />
+                        ) : (
+                          <View className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-[#334155] items-center justify-center">
+                            <TagIcon size={24} color="#9CA3AF" />
+                          </View>
+                        )}
                       </View>
-                    ))}
-                  </View>
-                </View>
-              ))}
+
+                      {/* Category Info */}
+                      <View className="flex-1 mr-3">
+                        <Text
+                          className={`text-base font-bold mb-1 ${
+                            isSelected
+                              ? 'text-primary-700 dark:text-primary-400'
+                              : 'text-gray-900 dark:text-white'
+                          }`}
+                        >
+                          {category.name}
+                        </Text>
+                        <Text
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                          className={`text-sm ${
+                            isSelected
+                              ? 'text-primary-600 dark:text-primary-300'
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {category.description}
+                        </Text>
+                      </View>
+
+                      {/* Check Icon */}
+                      <View className="justify-center">
+                        {isSelected ? (
+                          <CheckCircleIcon size={28} color="#F57C1F" />
+                        ) : (
+                          <View className="w-7 h-7 border-2 border-gray-300 dark:border-[#475569] rounded-full" />
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Empty State */}
+          {!loading && !error && categories.length === 0 && (
+            <View className="py-12 items-center">
+              <TagIcon size={64} color="#9CA3AF" />
+              <Text className="text-gray-600 dark:text-gray-400 mt-4 text-center">
+                No categories available at the moment
+              </Text>
+            </View>
+          )}
+
+          {/* Info Box */}
+          {!loading && categories.length > 0 && (
+            <View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800 mt-6">
+              <Text className="text-blue-700 dark:text-blue-400 text-sm font-semibold mb-1">
+                💡 Tip
+              </Text>
+              <Text className="text-blue-600 dark:text-blue-300 text-xs">
+                Select all categories that apply to your business. This helps clients find you more easily when searching for services.
+              </Text>
             </View>
           )}
         </View>
@@ -315,6 +313,8 @@ export default function BusinessStep4Screen() {
           <TouchableOpacity
             onPress={handleNext}
             className="flex-1 bg-primary-500 py-4 rounded-xl items-center"
+            disabled={selectedCategories.length === 0}
+            style={{ opacity: selectedCategories.length === 0 ? 0.5 : 1 }}
           >
             <Text className="text-white font-bold">Next: Review</Text>
           </TouchableOpacity>
