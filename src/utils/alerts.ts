@@ -3,6 +3,32 @@
 import { Alert, AlertButton, Platform } from 'react-native';
 
 /**
+ * IMPORTANT: These are legacy alert functions using React Native's default Alert.
+ * 
+ * For better UI/UX, consider using the CustomAlert component:
+ * 
+ * import { useCustomAlert } from '@/src/components/common/CustomAlert';
+ * 
+ * const { showAlert, AlertComponent } = useCustomAlert();
+ * 
+ * // Then in your JSX
+ * return (
+ *   <View>
+ *     {/* Your content *\/}
+ *     {AlertComponent}
+ *   </View>
+ * );
+ * 
+ * // To show an alert:
+ * showAlert({
+ *   type: 'success' | 'error' | 'warning' | 'info',
+ *   title: 'Title',
+ *   message: 'Message',
+ *   buttons: [{ text: 'OK', style: 'default', onPress: () => {} }],
+ * });
+ */
+
+/**
  * Shows a success alert
  * @param title - Alert title
  * @param message - Alert message

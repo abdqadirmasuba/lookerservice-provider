@@ -1,6 +1,6 @@
 // File: app/(business)/list.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -22,78 +24,88 @@ import {
   Cog6ToothIcon,
   CheckBadgeIcon,
   ExclamationTriangleIcon,
+  StarIcon,
 } from 'react-native-heroicons/outline';
+import { getProviderBusinesses } from '@/src/utils/business';
+
+interface Business {
+  id: string;
+  business_name: string;
+  status: string;
+  business_description: string;
+  location: {
+    longitude: number;
+    latitude: number;
+  };
+  address: string;
+  city: string;
+  state_region: string;
+  country: string;
+  average_rating: number;
+  total_bookings: number;
+  created_at: string;
+}
 
 export default function BusinessListScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data
-  const businesses = [
-    {
-      id: '1',
-      name: 'Doe Plumbing Services',
-      category: 'Plumbing',
-      location: 'Kampala, Uganda',
-      status: 'active',
-      rating: 4.8,
-      totalBookings: 127,
-      servicesCount: 12,
-      image: null,
-      verifiedAt: '2024-12-01',
-    },
-    {
-      id: '2',
-      name: 'Emergency Repairs Ltd',
-      category: 'Repairs',
-      location: 'Entebbe, Uganda',
-      status: 'pending',
-      rating: 0,
-      totalBookings: 0,
-      servicesCount: 5,
-      image: null,
-      submittedAt: '2025-01-08',
-    },
-    {
-      id: '3',
-      name: 'Quick Fix Solutions',
-      category: 'Maintenance',
-      location: 'Jinja, Uganda',
-      status: 'suspended',
-      rating: 4.2,
-      totalBookings: 45,
-      servicesCount: 8,
-      image: null,
-      suspendedReason: 'Pending commission payment',
-    },
-  ];
+  useEffect(() => {
+    fetchBusinesses();
+  }, []);
+
+  const fetchBusinesses = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getProviderBusinesses();
+      setBusinesses(response.data || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load businesses');
+      Alert.alert('Error', 'Failed to load businesses. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 2000);
+    fetchBusinesses().finally(() => setRefreshing(false));
   }, []);
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
+      case 'approved':
       case 'active':
         return {
           bg: 'bg-green-100 dark:bg-green-900/20',
           text: 'text-green-600 dark:text-green-400',
           icon: <CheckBadgeIcon size={14} color="#10B981" />,
-          label: 'Active',
+          label: 'Approved',
         };
       case 'pending':
         return {
           bg: 'bg-yellow-100 dark:bg-yellow-900/20',
           text: 'text-yellow-600 dark:text-yellow-400',
           icon: <ClockIcon size={14} color="#F59E0B" />,
-          label: 'Pending Approval',
+          label: 'Pending',
         };
-      case 'suspended':
+      case 'rejected':
         return {
           bg: 'bg-red-100 dark:bg-red-900/20',
           text: 'text-red-600 dark:text-red-400',
           icon: <ExclamationTriangleIcon size={14} color="#EF4444" />,
+          label: 'Rejected',
+        };
+      case 'suspended':
+        return {
+          bg: 'bg-orange-100 dark:bg-orange-900/20',
+          text: 'text-orange-600 dark:text-orange-400',
+          icon: <ExclamationTriangleIcon size={14} color="#F97316" />,
           label: 'Suspended',
         };
       default:
@@ -146,8 +158,37 @@ export default function BusinessListScreen() {
         className="flex-1"
       >
         <View className="px-6 py-6">
-          {businesses.map((business) => {
+          {/* Loading State */}
+          {loading && !refreshing && (
+            <View className="py-20 items-center">
+              <ActivityIndicator size="large" color="#F57C1F" />
+              <Text className="text-gray-600 dark:text-gray-400 mt-4">
+                Loading businesses...
+              </Text>
+            </View>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800 mb-6">
+              <Text className="text-red-700 dark:text-red-400 text-center mb-3">
+                {error}
+              </Text>
+              <TouchableOpacity
+                onPress={fetchBusinesses}
+                className="bg-red-600 py-2 px-4 rounded-lg"
+              >
+                <Text className="text-white text-center font-semibold">
+                  Retry
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Businesses List */}
+          {!loading && !error && businesses.map((business) => {
             const statusBadge = getStatusBadge(business.status);
+            const isApproved = business.status.toLowerCase() === 'approved';
             
             return (
               <TouchableOpacity
@@ -158,20 +199,16 @@ export default function BusinessListScreen() {
                 {/* Business Header */}
                 <View className="p-4">
                   <View className="flex-row items-start mb-3">
-                    {/* Business Image/Icon */}
+                    {/* Business Icon */}
                     <View className="w-16 h-16 bg-primary-50 dark:bg-primary-900/20 rounded-xl items-center justify-center mr-4">
-                      {business.image ? (
-                        <Image source={{ uri: business.image }} className="w-full h-full rounded-xl" />
-                      ) : (
-                        <BuildingStorefrontIcon size={32} color="#F57C1F" />
-                      )}
+                      <BuildingStorefrontIcon size={32} color="#F57C1F" />
                     </View>
 
                     {/* Business Info */}
                     <View className="flex-1">
                       <View className="flex-row items-start justify-between mb-1">
                         <Text className="text-lg font-bold text-gray-900 dark:text-white flex-1 mr-2">
-                          {business.name}
+                          {business.business_name}
                         </Text>
                         <View className={`${statusBadge.bg} px-2 py-1 rounded-full flex-row items-center`}>
                           {statusBadge.icon}
@@ -181,72 +218,84 @@ export default function BusinessListScreen() {
                         </View>
                       </View>
                       
-                      <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        {business.category}
+                      <Text 
+                        className="text-sm text-gray-600 dark:text-gray-400 mb-2"
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {business.business_description}
                       </Text>
 
                       <View className="flex-row items-center">
                         <MapPinIcon size={14} color="#6B7280" />
                         <Text className="text-xs text-gray-500 ml-1">
-                          {business.location}
+                          {business.city}, {business.state_region}
                         </Text>
                       </View>
                     </View>
                   </View>
 
                   {/* Stats */}
-                  {business.status === 'active' && (
+                  {isApproved && (
                     <View className="flex-row items-center justify-around py-3 bg-gray-50 dark:bg-[#0F172A] rounded-xl">
                       <View className="items-center">
-                        <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                          {business.rating}
-                        </Text>
+                        <View className="flex-row items-center mb-1">
+                          <StarIcon size={16} color="#F59E0B" />
+                          <Text className="text-lg font-bold text-gray-900 dark:text-white ml-1">
+                            {business.average_rating > 0 ? business.average_rating.toFixed(1) : 'N/A'}
+                          </Text>
+                        </View>
                         <Text className="text-xs text-gray-500">Rating</Text>
                       </View>
                       <View className="w-px h-8 bg-gray-300 dark:bg-[#334155]" />
                       <View className="items-center">
                         <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                          {business.totalBookings}
+                          {business.total_bookings}
                         </Text>
                         <Text className="text-xs text-gray-500">Bookings</Text>
-                      </View>
-                      <View className="w-px h-8 bg-gray-300 dark:bg-[#334155]" />
-                      <View className="items-center">
-                        <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                          {business.servicesCount}
-                        </Text>
-                        <Text className="text-xs text-gray-500">Services</Text>
                       </View>
                     </View>
                   )}
 
                   {/* Pending Notice */}
-                  {business.status === 'pending' && (
+                  {business.status.toLowerCase() === 'pending' && (
                     <View className="bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded-xl">
                       <Text className="text-yellow-700 dark:text-yellow-400 text-sm">
                         Your business is under review. You'll be notified once approved.
                       </Text>
                       <Text className="text-yellow-600 dark:text-yellow-500 text-xs mt-1">
-                        Submitted on {business.submittedAt}
+                        Submitted on {new Date(business.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Rejected Notice */}
+                  {business.status.toLowerCase() === 'rejected' && (
+                    <View className="bg-red-50 dark:bg-red-900/10 p-3 rounded-xl">
+                      <Text className="text-red-700 dark:text-red-400 text-sm font-semibold">
+                        Business Registration Rejected
+                      </Text>
+                      <Text className="text-red-600 dark:text-red-500 text-xs mt-1">
+                        Please review and resubmit with the required changes.
                       </Text>
                     </View>
                   )}
 
                   {/* Suspended Notice */}
-                  {business.status === 'suspended' && (
-                    <View className="bg-red-50 dark:bg-red-900/10 p-3 rounded-xl">
-                      <Text className="text-red-700 dark:text-red-400 text-sm font-semibold">
+                  {business.status.toLowerCase() === 'suspended' && (
+                    <View className="bg-orange-50 dark:bg-orange-900/10 p-3 rounded-xl">
+                      <Text className="text-orange-700 dark:text-orange-400 text-sm font-semibold">
                         Business Suspended
                       </Text>
-                      <Text className="text-red-600 dark:text-red-500 text-xs mt-1">
-                        {business.suspendedReason}
+                      <Text className="text-orange-600 dark:text-orange-500 text-xs mt-1">
+                        Contact support for more information.
                       </Text>
                     </View>
                   )}
                 </View>
 
                 {/* Quick Actions */}
-                {business.status === 'active' && (
+                {isApproved && (
                   <View className="flex-row border-t border-gray-200 dark:border-[#334155]">
                     <TouchableOpacity
                       onPress={() => router.push(`/(business)/${business.id}/analytics`)}
@@ -269,7 +318,7 @@ export default function BusinessListScreen() {
           })}
 
           {/* Empty State */}
-          {businesses.length === 0 && (
+          {!loading && !error && businesses.length === 0 && (
             <View className="items-center justify-center py-20">
               <View className="w-24 h-24 bg-gray-100 dark:bg-[#1E293B] rounded-full items-center justify-center mb-4">
                 <BuildingStorefrontIcon size={48} color="#9CA3AF" />

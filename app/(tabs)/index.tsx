@@ -41,6 +41,9 @@ export default function DashboardScreen() {
   const providerBusinesses = useSelector((state: RootState) => state.auth.providerBusinesses);
   const userData = useSelector((state: RootState) => state.user.user);
 
+  // Check if user has any registered businesses
+  const hasBusinesses = providerBusinesses && providerBusinesses.length > 0;
+
   // Fetch dashboard data
   const fetchDashboardData = async (providerId: string) => {
     setIsLoading(true);
@@ -180,71 +183,69 @@ export default function DashboardScreen() {
             </View>
           )}
 
-          {/* Quick Action */}
-          <TouchableOpacity
-            onPress={() => router.push('/(business)/register/step1')}
-            activeOpacity={0.8}
-          >
-            <View className="bg-white rounded-2xl p-4 flex-row items-center">
-              <View className="w-12 h-12 bg-primary-50 rounded-full items-center justify-center mr-4">
-                <PlusCircleIcon size={24} color="#F57C1F" />
+          {/* Quick Action - Show only if has businesses */}
+          {hasBusinesses && (
+            <TouchableOpacity
+              onPress={() => router.push('/(business)/list')}
+              activeOpacity={0.8}
+            >
+              <View className="bg-white rounded-2xl p-4 flex-row items-center">
+                <View className="w-12 h-12 bg-primary-50 rounded-full items-center justify-center mr-4">
+                  <ChartBarIcon size={24} color="#F57C1F" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-gray-900 font-bold text-base">Manage Businesses</Text>
+                  <Text className="text-gray-500 text-xs mt-0.5">View and manage all your businesses</Text>
+                </View>
               </View>
-              <View className="flex-1">
-                <Text className="text-gray-900 font-bold text-base">Register New Business</Text>
-                <Text className="text-gray-500 text-xs mt-0.5">Expand your service offerings</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
         </LinearGradient>
 
-        {/* Stats Grid */}
+        {/* Stats Grid or Empty State */}
         <View className="px-6 -mt-4">
-          {isLoading && !dashboardData ? (
+          {!hasBusinesses ? (
+            <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center shadow-sm">
+              <View className="w-20 h-20 bg-primary-50 dark:bg-primary-900/20 rounded-full items-center justify-center mb-4">
+                <PlusCircleIcon size={40} color="#F57C1F" />
+              </View>
+              <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">
+                No Active Businesses
+              </Text>
+              <Text className="text-gray-500 dark:text-gray-400 text-center mb-6 px-4">
+                Register your first business to start receiving bookings and grow your service offerings.
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(business)/register/step1')}
+                className="bg-primary-500 px-8 py-4 rounded-xl shadow-sm"
+                activeOpacity={0.8}
+              >
+                <Text className="text-white font-bold text-base">Register a Business</Text>
+              </TouchableOpacity>
+            </View>
+          ) : isLoading && !dashboardData ? (
             <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
               <ActivityIndicator size="large" color="#F57C1F" />
               <Text className="text-gray-500 mt-2">Loading dashboard...</Text>
             </View>
           ) : dashboardData ? (
-            <>
-              <View className="flex-row flex-wrap -mx-2">
-                <StatCard
-                  icon={<ClockIcon size={24} color="#F59E0B" />}
-                  label="Pending"
-                  value={dashboardData.stats.pending_bookings.toString()}
-                />
-                <StatCard
-                  icon={<CheckCircleIcon size={24} color="#2DA9E9" />}
-                  label="Accepted"
-                  value={dashboardData.stats.accepted_bookings.toString()}
-                />
-                <StatCard
-                  icon={<ChartBarIcon size={24} color="#10B981" />}
-                  label="Active"
-                  value={dashboardData.stats.active_bookings.toString()}
-                />
-                <StatCard
-                  icon={<CheckCircleIcon size={24} color="#059669" />}
-                  label="Completed"
-                  value={dashboardData.stats.completed_bookings.toString()}
-                />
-                <StatCard
-                  icon={<XCircleIcon size={24} color="#EF4444" />}
-                  label="Rejected"
-                  value={dashboardData.stats.rejected_bookings.toString()}
-                />
-                <StatCard
-                  icon={<XMarkIcon size={24} color="#DC2626" />}
-                  label="Cancelled"
-                  value={dashboardData.stats.cancelled_bookings.toString()}
-                />
-                <StatCard
-                  icon={<CurrencyDollarIcon size={24} color="#F57C1F" />}
-                  label="Total Earnings"
-                  value={formatCurrency(dashboardData.stats.total_earnings)}
-                  isLarge
-                />
-              </View>
-            </>
+            <View className="flex-row flex-wrap -mx-2">
+              <StatCard
+                icon={<ClockIcon size={24} color="#F59E0B" />}
+                label="Pending"
+                value={dashboardData.stats.pending_bookings.toString()}
+              />
+              <StatCard
+                icon={<ChartBarIcon size={24} color="#10B981" />}
+                label="Active"
+                value={dashboardData.stats.active_bookings.toString()}
+              />
+              <StatCard
+                icon={<CheckCircleIcon size={24} color="#2DA9E9" />}
+                label="Accepted"
+                value={dashboardData.stats.accepted_bookings.toString()}
+              />
+            </View>
           ) : (
             <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
               <Text className="text-gray-500">No business selected</Text>
@@ -252,7 +253,8 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        {/* Recent Bookings */}
+        {/* Recent Bookings - Only show if has businesses */}
+        {hasBusinesses && (
         <View className="px-6 mt-6">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-lg font-bold text-gray-900 dark:text-white">
@@ -318,8 +320,10 @@ export default function DashboardScreen() {
             </View>
           )}
         </View>
+        )}
 
-        {/* Quick Links */}
+        {/* Quick Links - Only show if has businesses */}
+        {hasBusinesses && (
         <View className="px-6 mt-6 mb-8">
           <Text className="text-lg font-bold mb-4 text-gray-900 dark:text-white">
             Quick Actions
@@ -347,6 +351,7 @@ export default function DashboardScreen() {
             />
           </View>
         </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

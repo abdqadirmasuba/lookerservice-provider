@@ -29,6 +29,7 @@ export const apiRequests = {
   post: (url: string, data?: any) => api.post(url, data),
   put: (url: string, data?: any) => api.put(url, data),
   patch: (url: string, data?: any) => api.patch(url, data),
+  delete: (url: string, data?: any) => api.delete(url, data ),
 };
 
 export default api;

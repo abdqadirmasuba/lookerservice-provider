@@ -68,3 +68,136 @@ export const uploadBusinessPhoto = async (photoUri: string) => {
     throw error;
   }
 };
+
+export const getProviderBusinesses = async () => {
+  try {
+    const response = await apiRequests.get('/provider/businesses');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getProviderProfile = async (providerId: string) => {
+  try {
+    const response = await apiRequests.get(`/provider/profile/${providerId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getProviderCategories = async (providerId: string) => {
+  try {
+    const response = await apiRequests.get(`/provider/${providerId}/categories`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const addProviderCategory = async (providerId: string, categoryId: string) => {
+  try {
+    const response = await apiRequests.post(`/provider/${providerId}/categories`, {
+      category_id: categoryId,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getServicesByCategories = async (categoryIds: string[]) => {
+  try {
+    const response = await apiRequests.post('/provider/services/by-categories', {
+      category_ids: categoryIds,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const createProviderService = async (
+  providerId: string,
+  data: {
+    service_id: string;
+    category_id: string;
+    description?: string;
+    pricing_type: string;
+    base_price?: number;
+    currency?: string;
+    images?: string[];
+  }
+) => {
+  try {
+    const response = await apiRequests.post(
+      `/provider/${providerId}/services/register`,
+      data
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateProviderService = async (
+  providerId: string,
+  serviceId: string,
+  categoryId: string,
+  data: {
+    description?: string;
+    pricing_type?: string;
+    base_price?: number;
+    currency?: string;
+    images?: string[];
+  }
+) => {
+  try {
+    const response = await apiRequests.patch(
+      `/provider/${providerId}/services/${serviceId}/${categoryId}`,
+      data
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deactivateProviderService = async (serviceId: string, categoryId: string, providerId: string) => {
+  try {
+    const response = await apiRequests.post(`/provider/${providerId}/services/deactivate`, {
+      service_id: serviceId,
+      category_id: categoryId,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const activateProviderService = async (serviceId: string, categoryId: string, providerId: string) => {
+  try {
+    const response = await apiRequests.post(`/provider/${providerId}/services/activate`, {
+      service_id: serviceId,
+      category_id: categoryId,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteProviderService = async (serviceId: string, categoryId: string, providerId: string) => {
+  try {
+    const response = await apiRequests.delete(`/provider/${providerId}/services/delete`, {
+      data: {
+        service_id: serviceId,
+        category_id: categoryId,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
