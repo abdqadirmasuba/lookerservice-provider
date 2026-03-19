@@ -3,6 +3,8 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 export interface ProviderBusiness {
   id: string;
   business_name: string;
+  last_accessed?: string;
+  is_last_accessed?: boolean;
 }
 
 interface AuthState {
@@ -10,6 +12,7 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   providerBusinesses: ProviderBusiness[];
+  activeBusinessId: string | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -19,6 +22,7 @@ const initialState: AuthState = {
   token: null,
   refreshToken: null,
   providerBusinesses: [],
+  activeBusinessId: null,
   isLoading: false,
   error: null,
 };
@@ -37,6 +41,9 @@ const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       if (action.payload.providerBusinesses) {
         state.providerBusinesses = action.payload.providerBusinesses;
+        // Set active business from is_last_accessed flag
+        const lastAccessed = action.payload.providerBusinesses.find(b => b.is_last_accessed);
+        state.activeBusinessId = lastAccessed?.id || action.payload.providerBusinesses[0]?.id || null;
       }
       state.isLoading = false;
       state.error = null;
@@ -50,13 +57,17 @@ const authSlice = createSlice({
       state.token = null;
       state.refreshToken = null;
       state.providerBusinesses = [];
+      state.activeBusinessId = null;
       state.error = null;
     },
     updateToken: (state, action: PayloadAction<string>) => {
       state.token = action.payload;
     },
+    setActiveBusiness: (state, action: PayloadAction<string>) => {
+      state.activeBusinessId = action.payload;
+    },
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, updateToken } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout, updateToken, setActiveBusiness } = authSlice.actions;
 export default authSlice.reducer;

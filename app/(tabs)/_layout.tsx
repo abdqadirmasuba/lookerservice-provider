@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Platform } from 'react-native';
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -29,10 +29,10 @@ export default function TabLayout() {
           backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
           borderTopColor: isDark ? '#334155' : '#E5E7EB',
           borderTopWidth: 1,
-          height: 70,
-          paddingBottom: 12,
-          paddingTop: 12,
-          paddingHorizontal: 8,
+          height: Platform.OS === 'ios' ? 85 : 70,
+          paddingBottom: Platform.OS === 'ios' ? 25 : 12,
+          paddingTop: 8,
+          paddingHorizontal: 10,
           elevation: 8,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
@@ -42,10 +42,10 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
-          marginTop: 4,
+          marginBottom: 2,
         },
         tabBarIconStyle: {
-          marginTop: 4,
+          marginTop: 0,
         },
       }}
     >

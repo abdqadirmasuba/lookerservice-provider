@@ -1,11 +1,11 @@
-// File: app/(tabs)/account.tsx
-
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/store';
 import {
   UserCircleIcon,
   BuildingStorefrontIcon,
@@ -20,22 +20,16 @@ import {
   StarIcon,
   ChartBarIcon,
   CurrencyDollarIcon,
+  ArrowsRightLeftIcon,
 } from 'react-native-heroicons/outline';
 
 export default function AccountScreen() {
   const router = useRouter();
 
-  // Mock user data
-  const userData = {
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+256 701 234 567',
-    profileImage: null,
-    joinedDate: 'January 2025',
-    rating: 4.8,
-    completedJobs: 127,
-    totalEarnings: 8500000,
-  };
+  // Get user data from Redux
+  const userData = useSelector((state: RootState) => state.user.user);
+  const providerBusinesses = useSelector((state: RootState) => state.auth.providerBusinesses);
+  const hasMultipleBusinesses = providerBusinesses && providerBusinesses.length > 1;
 
   const handleLogout = () => {
     Alert.alert(
@@ -69,7 +63,7 @@ export default function AccountScreen() {
             <View className="relative mb-4">
               <View className="w-24 h-24 bg-white rounded-full items-center justify-center">
                 <Text className="text-primary-500 text-4xl font-bold">
-                  {userData.fullName.charAt(0)}
+                  {userData?.fullName.charAt(0)}
                 </Text>
               </View>
               <TouchableOpacity
@@ -81,32 +75,30 @@ export default function AccountScreen() {
             </View>
 
             {/* User Info */}
-            <Text className="text-white text-2xl font-bold mb-1">{userData.fullName}</Text>
-            <Text className="text-white/80 text-sm mb-1">{userData.email}</Text>
-            <Text className="text-white/70 text-xs">Member since {userData.joinedDate}</Text>
+            <Text className="text-white text-2xl font-bold mb-1">{userData?.fullName || 'Provider'}</Text>
+            <Text className="text-white/80 text-sm mb-1">{userData?.email || ''}</Text>
+            <Text className="text-white/70 text-xs">Member since {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : ''}</Text>
 
             {/* Stats */}
             <View className="flex-row mt-6 w-full">
               <View className="flex-1 items-center">
                 <View className="flex-row items-center mb-1">
                   <StarIcon size={16} color="#FFF" />
-                  <Text className="text-white text-xl font-bold ml-1">{userData.rating}</Text>
+                  <Text className="text-white text-xl font-bold ml-1">4.8</Text>
                 </View>
                 <Text className="text-white/70 text-xs">Rating</Text>
               </View>
               <View className="flex-1 items-center border-x border-white/30">
                 <View className="flex-row items-center mb-1">
                   <ChartBarIcon size={16} color="#FFF" />
-                  <Text className="text-white text-xl font-bold ml-1">{userData.completedJobs}</Text>
+                  <Text className="text-white text-xl font-bold ml-1">0</Text>
                 </View>
                 <Text className="text-white/70 text-xs">Jobs Done</Text>
               </View>
               <View className="flex-1 items-center">
                 <View className="flex-row items-center mb-1">
                   <CurrencyDollarIcon size={16} color="#FFF" />
-                  <Text className="text-white text-xl font-bold ml-1">
-                    {(userData.totalEarnings / 1000000).toFixed(1)}M
-                  </Text>
+                  <Text className="text-white text-xl font-bold ml-1">0</Text>
                 </View>
                 <Text className="text-white/70 text-xs">Earnings</Text>
               </View>
@@ -121,6 +113,18 @@ export default function AccountScreen() {
             Business
           </Text>
           <View className="bg-white dark:bg-[#1E293B] rounded-2xl mb-6 shadow-sm overflow-hidden">
+            {/* Switch Business - Show only if multiple businesses */}
+            {hasMultipleBusinesses && (
+              <>
+                <MenuItem
+                  icon={<ArrowsRightLeftIcon size={24} color="#F57C1F" />}
+                  title="Switch Active Business"
+                  subtitle="Change which business you're managing"
+                  onPress={() => router.push('/(business)/switch-business')}
+                />
+                <Divider />
+              </>
+            )}
             <MenuItem
               icon={<BuildingStorefrontIcon size={24} color="#F57C1F" />}
               title="My Businesses"

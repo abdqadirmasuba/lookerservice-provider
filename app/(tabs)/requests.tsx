@@ -1,16 +1,22 @@
 // File: app/(tabs)/requests.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/store';
+import { apiRequests } from '@/src/utils/apiRequest';
+import { showErrorAlert } from '@/src/utils/alerts';
+import { ServiceRequest } from '@/src/types/serviceRequest';
 import {
   ClockIcon,
   CheckIcon,
@@ -26,67 +32,83 @@ export default function RequestsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('incoming');
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [directRequests, setDirectRequests] = useState<ServiceRequest[]>([]);
+  
+  const activeBusinessId = useSelector((state: RootState) => state.auth.activeBusinessId);
 
-  // Mock data
-  const incomingRequests = [
-    {
-      id: '1',
-      clientName: 'Alice Nambi',
-      service: 'Pipe Repair',
-      location: 'Kampala, Nakawa',
-      date: '2025-01-10',
-      time: '10:00 AM',
-      description: 'Leaking pipe in kitchen needs urgent repair',
-      budget: 150000,
-      timestamp: '15 mins ago',
-    },
-    {
-      id: '2',
-      clientName: 'Bob Okello',
-      service: 'Bathroom Installation',
-      location: 'Entebbe',
-      date: '2025-01-12',
-      time: '2:00 PM',
-      description: 'Complete bathroom renovation with modern fixtures',
-      budget: 800000,
-      timestamp: '1 hour ago',
-    },
-  ];
+  useEffect(() => {
+    if (activeBusinessId && activeTab === 'incoming') {
+      fetchDirectRequests();
+    }
+  }, [activeBusinessId, activeTab]);
 
-  const serviceRequests = [
-    {
-      id: '1',
-      title: 'Water Heater Installation',
-      location: 'Kampala, Kololo',
-      category: 'Plumbing',
-      budget: 500000,
-      deadline: '2025-01-15',
-      description: 'Need to install new electric water heater in 2-bedroom apartment',
-      bidsCount: 12,
-      status: 'verified',
-      timestamp: '2 hours ago',
-    },
-    {
-      id: '2',
-      title: 'Commercial Pipe System Overhaul',
-      location: 'Jinja',
-      category: 'Plumbing',
-      budget: 2500000,
-      deadline: '2025-01-20',
-      description: 'Complete pipe system replacement for 3-story office building',
-      bidsCount: 8,
-      status: 'verified',
-      timestamp: '5 hours ago',
-    },
-  ];
+  const fetchDirectRequests = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequests.get(
+        `/provider/${activeBusinessId}/service-requests/direct`
+      );
+      if (response.data.success) {
+        setDirectRequests(response.data.data);
+      } else {
+        showErrorAlert('Error', response.data.message || 'Failed to fetch service requests');
+      }
+    } catch (error: any) {
+      console.error('Service requests fetch error:', error);
+      showErrorAlert('Error', 'Failed to fetch service requests');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Mock data for service requests tab (to be implemented later)
+  const serviceRequests: any[] = [];
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 2000);
-  }, []);
+    if (activeBusinessId && activeTab === 'incoming') {
+      fetchDirectRequests().finally(() => setRefreshing(false));
+    } else {
+      setRefreshing(false);
+    }
+  }, [activeBusinessId, activeTab]);
 
   const formatCurrency = (amount: number) => {
-    return `UGX ${amount.toLocaleString()}`;
+    return `UGX ${amount?.toLocaleString()}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+    });
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) {
+      return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else {
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
   };
 
   return (
@@ -117,7 +139,7 @@ export default function RequestsScreen() {
                 activeTab === 'incoming' ? 'text-white' : 'text-gray-600 dark:text-gray-400'
               }`}
             >
-              Incoming ({incomingRequests.length})
+              Direct Requests ({directRequests.length})
             </Text>
           </TouchableOpacity>
 
@@ -132,7 +154,7 @@ export default function RequestsScreen() {
                 activeTab === 'service-requests' ? 'text-white' : 'text-gray-600 dark:text-gray-400'
               }`}
             >
-              Service Requests ({serviceRequests.length})
+              Open Requests (0)
             </Text>
           </TouchableOpacity>
         </View>
@@ -147,91 +169,144 @@ export default function RequestsScreen() {
       >
         {activeTab === 'incoming' ? (
           <View className="px-6 pb-6">
-            {incomingRequests.map((request) => (
-              <TouchableOpacity
-                key={request.id}
-                onPress={() => router.push(`/(bookings)/request/${request.id}`)}
-                className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 shadow-sm"
-              >
-                {/* Header */}
-                <View className="flex-row items-start justify-between mb-3">
-                  <View className="flex-row items-center flex-1">
-                    <View className="w-12 h-12 bg-primary-50 rounded-full items-center justify-center mr-3">
-                      <Text className="text-primary-500 font-bold text-lg">
-                        {request.clientName.charAt(0)}
+            {isLoading ? (
+              <View className="py-10 items-center">
+                <ActivityIndicator size="large" color="#F57C1F" />
+              </View>
+            ) : directRequests.length === 0 ? (
+              <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
+                <Text className="text-gray-500 dark:text-gray-400 text-center">
+                  No direct service requests yet
+                </Text>
+              </View>
+            ) : (
+              directRequests.map((request) => (
+                <TouchableOpacity
+                  key={request.id}
+                  onPress={() => router.push(`/(service-requests)/${request.id}`)}
+                  className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 shadow-sm"
+                >
+                  {/* Header */}
+                  <View className="flex-row items-start justify-between mb-3">
+                    <View className="flex-row items-center flex-1">
+                      <View className="w-12 h-12 bg-primary-50 rounded-full items-center justify-center mr-3">
+                        <Text className="text-primary-500 font-bold text-lg">
+                          {request.client_name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text className="font-bold text-gray-900 dark:text-white">
+                          {request.client_name}
+                        </Text>
+                        <Text className="text-xs text-gray-500">
+                          {getTimeAgo(request.created_at)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className={`px-2 py-1 rounded-full ${
+                      request.provider_response.provider_response_type === 'pending'
+                        ? 'bg-orange-100'
+                        : request.provider_response.provider_response_type === 'accepted'
+                        ? 'bg-green-100'
+                        : 'bg-red-100'
+                    }`}>
+                      {request.provider_response.provider_response_type === 'pending' ? (
+                        <ClockIcon size={16} color="#F59E0B" />
+                      ) : request.provider_response.provider_response_type === 'accepted' ? (
+                        <CheckIcon size={16} color="#10B981" />
+                      ) : (
+                        <XMarkIcon size={16} color="#EF4444" />
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Request Number */}
+                  <Text className="text-xs text-gray-500 mb-2">
+                    {request.request_number}
+                  </Text>
+
+                  {/* Services */}
+                  <View className="mb-3">
+                    {request.services.map((service, index) => (
+                      <View key={service.id} className="flex-row items-center mb-1">
+                        <View className="w-2 h-2 bg-primary-500 rounded-full mr-2" />
+                        <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {service.service_name}
+                        </Text>
+                        <Text className="text-xs text-gray-500 ml-2">
+                          ({service.category_name})
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Description */}
+                  <Text className="text-sm mb-3 text-gray-600 dark:text-gray-400" numberOfLines={2}>
+                    {request.description}
+                  </Text>
+
+                  {/* Details */}
+                  <View className="space-y-2 mb-4">
+                    <View className="flex-row items-center">
+                      <MapPinIcon size={16} color="#6B7280" />
+                      <Text className="text-sm ml-2 text-gray-600 dark:text-gray-400">
+                        {request.address}, {request.city}
                       </Text>
                     </View>
-                    <View className="flex-1">
-                      <Text className="font-bold text-gray-900 dark:text-white">
-                        {request.clientName}
+                    <View className="flex-row items-center">
+                      <CalendarIcon size={16} color="#6B7280" />
+                      <Text className="text-sm ml-2 text-gray-600 dark:text-gray-400">
+                        {formatDate(request.preferred_date)} at {formatTime(request.preferred_date)}
                       </Text>
-                      <Text className="text-xs text-gray-500">
-                        {request.timestamp}
+                    </View>
+                    <View className="flex-row items-center">
+                      <CurrencyDollarIcon size={16} color="#6B7280" />
+                      <Text className="text-sm ml-2 text-gray-600 dark:text-gray-400">
+                        Budget: {formatCurrency(request.budget_min)} - {formatCurrency(request.budget_max)}
                       </Text>
                     </View>
                   </View>
-                  <View className="px-2 py-1 bg-orange-100 rounded-full">
-                    <ClockIcon size={16} color="#F59E0B" />
-                  </View>
-                </View>
 
-                {/* Service */}
-                <Text className="text-lg font-bold mb-2 text-gray-900 dark:text-white">
-                  {request.service}
-                </Text>
-
-                {/* Description */}
-                <Text className="text-sm mb-3 text-gray-600 dark:text-gray-400">
-                  {request.description}
-                </Text>
-
-                {/* Details */}
-                <View className="space-y-2 mb-4">
-                  <View className="flex-row items-center">
-                    <MapPinIcon size={16} color="#6B7280" />
-                    <Text className="text-sm ml-2 text-gray-600 dark:text-gray-400">
-                      {request.location}
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center">
-                    <CalendarIcon size={16} color="#6B7280" />
-                    <Text className="text-sm ml-2 text-gray-600 dark:text-gray-400">
-                      {request.date} at {request.time}
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center">
-                    <CurrencyDollarIcon size={16} color="#6B7280" />
-                    <Text className="text-sm ml-2 text-gray-600 dark:text-gray-400">
-                      Budget: {formatCurrency(request.budget)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Actions */}
-                <View className="flex-row space-x-3">
-                  <TouchableOpacity
-                    onPress={() => router.push(`/(bookings)/accept?id=${request.id}`)}
-                    className="flex-1 bg-primary-500 py-3 rounded-xl flex-row items-center justify-center"
-                  >
-                    <CheckIcon size={20} color="#FFFFFF" />
-                    <Text className="text-white font-bold ml-2">Accept</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => router.push(`/(bookings)/reject?id=${request.id}`)}
-                    className="flex-1 bg-gray-100 dark:bg-[#0F172A] border border-gray-300 dark:border-[#334155] py-3 rounded-xl flex-row items-center justify-center"
-                  >
-                    <XMarkIcon size={20} color="#6B7280" />
-                    <Text className="font-bold ml-2 text-gray-600 dark:text-gray-400">
-                      Decline
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  {/* Status Message */}
+                  {request.provider_response.provider_response_type !== 'pending' && (
+                    <View className={`px-3 py-2 rounded-lg ${
+                      request.provider_response.provider_response_type === 'accepted'
+                        ? 'bg-green-50'
+                        : 'bg-red-50'
+                    }`}>
+                      <Text className={`text-sm font-medium ${
+                        request.provider_response.provider_response_type === 'accepted'
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}>
+                        {request.provider_response.provider_response_type === 'accepted'
+                          ? 'You accepted this request'
+                          : 'You rejected this request'}
+                      </Text>
+                      {request.response_message && (
+                        <Text className="text-sm text-gray-600 mt-1">
+                          {request.response_message}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         ) : (
           <View className="px-6 pb-6">
-            {serviceRequests.map((request) => (
+            {serviceRequests.length === 0 ? (
+              <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
+                <Text className="text-gray-500 dark:text-gray-400 text-center">
+                  No open service requests available
+                </Text>
+                <Text className="text-gray-400 dark:text-gray-500 text-center text-sm mt-2">
+                  Open requests will appear here
+                </Text>
+              </View>
+            ) : (
+              serviceRequests.map((request) => (
               <TouchableOpacity
                 key={request.id}
                 onPress={() => router.push(`/(bids)/${request.id}`)}
@@ -301,7 +376,8 @@ export default function RequestsScreen() {
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
-            ))}
+            ))
+            )}
           </View>
         )}
       </ScrollView>

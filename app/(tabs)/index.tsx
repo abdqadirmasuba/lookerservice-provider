@@ -28,21 +28,26 @@ import {
   StarIcon,
   XCircleIcon,
   XMarkIcon,
+  BuildingStorefrontIcon,
 } from 'react-native-heroicons/outline';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Get provider businesses from Redux
+  // Get provider businesses and active business from Redux
   const providerBusinesses = useSelector((state: RootState) => state.auth.providerBusinesses);
+  const activeBusinessId = useSelector((state: RootState) => state.auth.activeBusinessId);
   const userData = useSelector((state: RootState) => state.user.user);
 
   // Check if user has any registered businesses
   const hasBusinesses = providerBusinesses && providerBusinesses.length > 0;
+
+  // Get active business details
+  const activeBusiness = providerBusinesses.find(b => b.id === activeBusinessId);
+  const businessCount = providerBusinesses.length;
 
   // Fetch dashboard data
   const fetchDashboardData = async (providerId: string) => {
@@ -62,30 +67,21 @@ export default function DashboardScreen() {
     }
   };
 
-  // Initialize with first business
+  // Fetch data when active business is set
   useEffect(() => {
-    if (providerBusinesses && providerBusinesses.length > 0) {
-      const firstBusinessId = providerBusinesses[0].id;
-      setSelectedBusinessId(firstBusinessId);
-      fetchDashboardData(firstBusinessId);
+    if (activeBusinessId) {
+      fetchDashboardData(activeBusinessId);
     }
-  }, []);
-
-  // Fetch data when selected business changes
-  useEffect(() => {
-    if (selectedBusinessId) {
-      fetchDashboardData(selectedBusinessId);
-    }
-  }, [selectedBusinessId]);
+  }, [activeBusinessId]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    if (selectedBusinessId) {
-      fetchDashboardData(selectedBusinessId).finally(() => setRefreshing(false));
+    if (activeBusinessId) {
+      fetchDashboardData(activeBusinessId).finally(() => setRefreshing(false));
     } else {
       setRefreshing(false);
     }
-  }, [selectedBusinessId]);
+  }, [activeBusinessId]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -107,7 +103,7 @@ export default function DashboardScreen() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `UGX ${amount.toLocaleString()}`;
+    return `UGX ${amount?.toLocaleString()}`;
   };
 
   return (
@@ -126,79 +122,62 @@ export default function DashboardScreen() {
           className="px-6 pt-4 pb-8 rounded-b-3xl"
         >
           <View className="flex-row items-center justify-between mb-6">
-            <View>
+            <View className="flex-1">
               <Text className="text-white/80 text-sm">Welcome back,</Text>
               <Text className="text-white text-xl font-bold mt-1">{userData?.fullName || 'Provider'}</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push('/(notifications)')}
-              className="w-10 h-10 bg-white/20 rounded-full items-center justify-center"
-            >
-              <BellIcon size={24} color="#FFFFFF" />
-              <View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
-                <Text className="text-white text-xs font-bold">3</Text>
-              </View>
-            </TouchableOpacity>
+            <View className="flex-row items-center">
+              {/* Business Switcher Icon - Show if more than one business */}
+              {businessCount > 1 && (
+                <TouchableOpacity
+                  onPress={() => router.push('/(business)/switch-business')}
+                  className="w-10 h-10 bg-white/20 rounded-full items-center justify-center mr-3"
+                >
+                  <BuildingStorefrontIcon size={24} color="#FFFFFF" />
+                  <View className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full items-center justify-center">
+                    <Text className="text-white text-xs font-bold">{businessCount}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              
+              {/* Notifications */}
+              <TouchableOpacity
+                onPress={() => router.push('/(notifications)')}
+                className="w-10 h-10 bg-white/20 rounded-full items-center justify-center"
+              >
+                <BellIcon size={24} color="#FFFFFF" />
+                <View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+                  <Text className="text-white text-xs font-bold">3</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Business Selector */}
-          {providerBusinesses && providerBusinesses.length > 1 && (
+          {/* Active Business Display */}
+          {hasBusinesses && activeBusiness && (
             <View className="mb-4">
               <Text className="text-white/80 text-xs mb-2">Active Business</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {providerBusinesses.map((business) => (
-                  <TouchableOpacity
-                    key={business.id}
-                    onPress={() => setSelectedBusinessId(business.id)}
-                    className={`mr-3 px-4 py-2 rounded-full ${
-                      selectedBusinessId === business.id
-                        ? 'bg-white'
-                        : 'bg-white/20'
-                    }`}
-                  >
-                    <Text
-                      className={`text-sm font-semibold ${
-                        selectedBusinessId === business.id
-                          ? 'text-primary-500'
-                          : 'text-white'
-                      }`}
-                    >
-                      {business.business_name}
+              <View className="bg-white rounded-2xl px-4 py-3">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1">
+                    <Text className="text-primary-500 font-bold text-base">
+                      {activeBusiness.business_name}
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Single Business Display */}
-          {providerBusinesses && providerBusinesses.length === 1 && (
-            <View className="mb-4">
-              <Text className="text-white/80 text-xs mb-2">Business</Text>
-              <View className="bg-white rounded-full px-4 py-2 self-start">
-                <Text className="text-primary-500 font-semibold text-sm">
-                  {providerBusinesses[0].business_name}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Quick Action - Show only if has businesses */}
-          {hasBusinesses && (
-            <TouchableOpacity
-              onPress={() => router.push('/(business)/list')}
-              activeOpacity={0.8}
-            >
-              <View className="bg-white rounded-2xl p-4 flex-row items-center">
-                <View className="w-12 h-12 bg-primary-50 rounded-full items-center justify-center mr-4">
-                  <ChartBarIcon size={24} color="#F57C1F" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-900 font-bold text-base">Manage Businesses</Text>
-                  <Text className="text-gray-500 text-xs mt-0.5">View and manage all your businesses</Text>
+                    <Text className="text-gray-500 text-xs mt-1">
+                      {businessCount} {businessCount === 1 ? 'business' : 'businesses'} registered
+                    </Text>
+                  </View>
+                  {businessCount > 1 && (
+                    <TouchableOpacity
+                      onPress={() => router.push('/(business)/switch-business')}
+                      className="px-3 py-1.5 bg-primary-50 rounded-lg"
+                    >
+                      <Text className="text-primary-600 font-semibold text-xs">Switch</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
-            </TouchableOpacity>
+            </View>
           )}
         </LinearGradient>
 
