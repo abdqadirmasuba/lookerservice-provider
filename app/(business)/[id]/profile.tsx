@@ -31,6 +31,8 @@ import {
 } from 'react-native-heroicons/outline';
 import { getProviderProfile } from '@/src/utils/business';
 
+type DayHoursValue = { open: string; close: string } | 'closed';
+
 interface BusinessProfile {
   id: string;
   business_name: string;
@@ -43,8 +45,8 @@ interface BusinessProfile {
   city: string;
   state_region: string;
   country: string;
-  postal_code: string;
   verification_status: string;
+  business_photos?: string[];
   services: any[];
   reviews: any[];
   review_summary: {
@@ -57,7 +59,7 @@ interface BusinessProfile {
     cancelled_bookings: number;
     completion_percentage: number;
   };
-  business_hours?: { [key: string]: string };
+  business_hours?: { [key: string]: DayHoursValue };
   created_at: string;
   updated_at: string;
   approved_at?: string;
@@ -179,33 +181,52 @@ export default function BusinessProfileScreen() {
         }
       >
         {/* Business Header */}
-        <View className="relative bg-gradient-to-b from-primary-500 to-primary-600 p-6">
+        <View className="relative">
+          {/* Cover photo or gradient */}
+          {business.business_photos && business.business_photos.length > 0 ? (
+            <Image
+              source={{ uri: business.business_photos[0] }}
+              className="w-full h-48"
+              resizeMode="cover"
+            />
+          ) : null}
           <LinearGradient
-            colors={['#F57C1F', '#E06A0F']}
-            className="absolute inset-0"
-          />
-          <View className="flex-row items-center mb-4">
-            <View className="w-20 h-20 bg-white rounded-2xl items-center justify-center mr-4">
-              <BuildingStorefrontIcon size={40} color="#F57C1F" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-white text-2xl font-bold mb-1">
-                {business.business_name}
-              </Text>
-              <View className="flex-row items-center">
-                <MapPinIcon size={16} color="#FFFFFF" />
-                <Text className="text-white/80 text-sm ml-1">
-                  {business.city}, {business.state_region}
-                </Text>
+            colors={[
+              business.business_photos && business.business_photos.length > 0
+                ? 'transparent'
+                : '#F57C1F',
+              '#E06A0F',
+            ]}
+            className="p-6"
+          >
+            <View className="flex-row items-center">
+              <View className="w-20 h-20 bg-white rounded-2xl items-center justify-center mr-4 shadow-md">
+                <BuildingStorefrontIcon size={40} color="#F57C1F" />
               </View>
+              <View className="flex-1">
+                <Text className="text-white text-2xl font-bold mb-1">
+                  {business.business_name}
+                </Text>
+                <View className="flex-row items-center">
+                  <MapPinIcon size={16} color="#FFFFFF" />
+                  <Text className="text-white/80 text-sm ml-1">
+                    {business.city}, {business.state_region}
+                  </Text>
+                </View>
+                {business.business_photos && business.business_photos.length > 0 && (
+                  <Text className="text-white/60 text-xs mt-1">
+                    {business.business_photos.length} photo{business.business_photos.length > 1 ? 's' : ''}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={() => router.push(`/(business)/${businessId}/edit`)}
+                className="w-10 h-10 bg-white/20 rounded-full items-center justify-center"
+              >
+                <PencilIcon size={20} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push(`/(business)/${businessId}/edit`)}
-              className="w-10 h-10 bg-white/20 backdrop-blur rounded-full items-center justify-center"
-            >
-              <PencilIcon size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+          </LinearGradient>
         </View>
 
         {/* Stats */}
@@ -321,7 +342,10 @@ export default function BusinessProfileScreen() {
                         {business.city}, {business.state_region}
                       </Text>
                       <Text className="text-xs text-gray-500 mt-1">
-                        {business.country} {business.postal_code && `• ${business.postal_code}`}
+                        {business.country}
+                      </Text>
+                      <Text className="text-xs text-gray-400 mt-0.5">
+                        {business.location.latitude.toFixed(4)}, {business.location.longitude.toFixed(4)}
                       </Text>
                     </View>
                   </View>
@@ -335,26 +359,59 @@ export default function BusinessProfileScreen() {
                 </Text>
                 {business.business_hours && Object.keys(business.business_hours).length > 0 ? (
                   <View className="space-y-2">
-                    {Object.entries(business.business_hours).map(([day, hours]) => (
-                      <View key={day} className="flex-row justify-between">
-                        <Text className="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                          {day}
-                        </Text>
-                        <Text className="text-sm text-gray-900 dark:text-white font-medium">
-                          {hours}
-                        </Text>
-                      </View>
-                    ))}
+                    {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+                      .filter((d) => business.business_hours![d] !== undefined)
+                      .map((day) => {
+                        const h = business.business_hours![day];
+                        const isClosed = h === 'closed';
+                        const label = { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' }[day];
+                        return (
+                          <View key={day} className="flex-row justify-between items-center py-1 border-b border-gray-100 dark:border-[#334155]">
+                            <Text className="text-sm text-gray-600 dark:text-gray-400 w-24">
+                              {label}
+                            </Text>
+                            {isClosed ? (
+                              <View className="bg-red-100 dark:bg-red-900/20 px-3 py-0.5 rounded-full">
+                                <Text className="text-xs font-semibold text-red-600 dark:text-red-400">Closed</Text>
+                              </View>
+                            ) : (
+                              <Text className="text-sm text-gray-900 dark:text-white font-medium">
+                                {(h as { open: string; close: string }).open} – {(h as { open: string; close: string }).close}
+                              </Text>
+                            )}
+                          </View>
+                        );
+                      })}
                   </View>
                 ) : (
                   <View className="py-4 items-center">
                     <ClockIcon size={32} color="#9CA3AF" />
                     <Text className="text-gray-500 dark:text-gray-400 mt-2 text-sm">
-                      Time not set
+                      Hours not set
                     </Text>
                   </View>
                 )}
               </View>
+
+              {/* Photos */}
+              {business.business_photos && business.business_photos.length > 0 && (
+                <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-gray-200 dark:border-[#334155]">
+                  <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                    Photos ({business.business_photos.length})
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
+                    {business.business_photos.map((uri, idx) => (
+                      <View key={idx} className="px-1">
+                        <Image
+                          source={{ uri }}
+                          className="w-32 h-24 rounded-xl"
+                          resizeMode="cover"
+                        />
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
 
               {/* Verification Status */}
               <View className={`rounded-2xl p-4 border ${
@@ -393,49 +450,68 @@ export default function BusinessProfileScreen() {
               {business.services.length > 0 ? (
                 business.services.map((service: any) => (
                   <View
-                    key={service.id}
+                    key={service.provider_service_id || service.id}
                     className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-gray-200 dark:border-[#334155]"
                   >
-                    <View className="flex-row items-center justify-between mb-2">
-                      <Text className="text-base font-bold text-gray-900 dark:text-white flex-1">
-                        {service.service_name || service.name}
-                      </Text>
-                      <View
-                        className={`px-2 py-1 rounded-full ${
-                          service.status === 'active'
-                            ? 'bg-green-100 dark:bg-green-900/20'
-                            : service.status === 'hidden'
-                            ? 'bg-gray-100 dark:bg-gray-800'
-                            : 'bg-red-100 dark:bg-red-900/20'
-                        }`}
-                      >
-                        <Text
-                          className={`text-xs font-bold ${
-                            service.status === 'active'
-                              ? 'text-green-600 dark:text-green-400'
-                              : service.status === 'hidden'
-                              ? 'text-gray-600 dark:text-gray-400'
-                              : 'text-red-600 dark:text-red-400'
-                          }`}
-                        >
-                          {service.status === 'active' ? 'Active' : service.status === 'hidden' ? 'Hidden' : 'Down'}
+                    <View className="flex-row items-start">
+                      {/* Service icon */}
+                      <View className="w-12 h-12 bg-gray-100 dark:bg-[#334155] rounded-xl items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                        {service.service_icon_url ? (
+                          <Image
+                            source={{ uri: service.service_icon_url }}
+                            className="w-8 h-8"
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <BuildingStorefrontIcon size={24} color="#9CA3AF" />
+                        )}
+                      </View>
+                      <View className="flex-1">
+                        <View className="flex-row items-center justify-between mb-1">
+                          <Text className="text-base font-bold text-gray-900 dark:text-white flex-1 mr-2">
+                            {service.title || service.service_name || service.name}
+                          </Text>
+                          <View
+                            className={`px-2 py-0.5 rounded-full ${
+                              service.status === 'active'
+                                ? 'bg-green-100 dark:bg-green-900/20'
+                                : service.status === 'hidden'
+                                ? 'bg-gray-100 dark:bg-gray-800'
+                                : 'bg-red-100 dark:bg-red-900/20'
+                            }`}
+                          >
+                            <Text
+                              className={`text-xs font-bold ${
+                                service.status === 'active'
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : service.status === 'hidden'
+                                  ? 'text-gray-600 dark:text-gray-400'
+                                  : 'text-red-600 dark:text-red-400'
+                              }`}
+                            >
+                              {service.status === 'active' ? 'Active' : service.status === 'hidden' ? 'Hidden' : 'Down'}
+                            </Text>
+                          </View>
+                        </View>
+                        {service.category_name && (
+                          <Text className="text-xs text-primary-500 font-medium mb-1">
+                            {service.category_name}
+                          </Text>
+                        )}
+                        {service.description && (
+                          <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2" numberOfLines={2}>
+                            {service.description}
+                          </Text>
+                        )}
+                        <Text className="text-primary-500 font-bold">
+                          {service.pricing_type === 'negotiable'
+                            ? 'Negotiable'
+                            : service.base_price != null && service.currency
+                            ? `${service.currency} ${service.base_price.toLocaleString()}`
+                            : 'Price not set'}
                         </Text>
                       </View>
                     </View>
-                    {service.description && (
-                      <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        {service.description}
-                      </Text>
-                    )}
-                    <Text className="text-primary-500 font-bold">
-                      {service.pricing_type === 'negotiable' 
-                        ? 'Negotiable'
-                        : service.base_price && service.currency
-                        ? `${service.currency} ${service.base_price.toLocaleString()}`
-                        : service.price
-                        ? `UGX ${service.price}`
-                        : 'Price not set'}
-                    </Text>
                   </View>
                 ))
               ) : (

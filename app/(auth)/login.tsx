@@ -4,8 +4,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { loginStart, loginSuccess, loginFailure } from '@/src/store/slices/authSlice';
@@ -20,55 +21,57 @@ import {
   LockClosedIcon,
   EyeIcon,
   EyeSlashIcon,
+  ExclamationCircleIcon,
+  CheckCircleIcon,
 } from 'react-native-heroicons/outline';
 import KeyboardAvoidingWrapper from '@/src/components/common/KeyboardAvoidingWrapper';
-import {
-  showErrorAlert,
-  showValidationError,
-  showRequiredFieldAlert,
-} from '@/src/utils/alerts';
 import {apiRequests} from '@/src/utils/apiRequest';
-import axios from 'axios';
 
 type TabType = 'email' | 'phone';
 
 export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const params = useLocalSearchParams();
+  const successMessage = (params.successMessage as string) || '';
   const [activeTab, setActiveTab] = useState<TabType>('email');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
+    setErrorMessage('');
     if (activeTab === 'email') {
       if (!email.trim()) {
-        showRequiredFieldAlert('Email address');
+        setErrorMessage('Please enter your email address');
         return;
       }
       if (!password) {
-        showRequiredFieldAlert('Password');
+        setErrorMessage('Please enter your password');
         return;
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        showValidationError('Please enter a valid email address');
+        setErrorMessage('Please enter a valid email address');
         return;
       }
     }
     if (activeTab === 'phone') {
       if (!phone.trim()) {
-        showRequiredFieldAlert('Phone number');
+        setErrorMessage('Please enter your phone number');
         return;
       }
       if (!password) {
-        showRequiredFieldAlert('Password');
+        setErrorMessage('Please enter your password');
         return;
       }
     }
 
     dispatch(loginStart());
+    setIsLoading(true);
     try {
       const response = await apiRequests.post('/auth/login', {
         email,
@@ -76,7 +79,6 @@ export default function LoginScreen() {
         password,
       });
       const res = response.data;
-      console.log('Login response:', res);
       if (res.success && res.data) {
         // Store refresh token in AsyncStorage
         await AsyncStorage.setItem(REFRESH_TOKEN_KEY, res.data.refresh_token);
@@ -98,13 +100,17 @@ export default function LoginScreen() {
         // Redirect to dashboard
         router.replace('/(tabs)');
       } else {
-        dispatch(loginFailure(res.message || 'Login failed'));
-        showErrorAlert('Login Failed', res.message || 'Invalid credentials. Please try again.');
+        const msg = res.message || 'Login failed. Please try again.';
+        dispatch(loginFailure(msg));
+        setErrorMessage(msg);
       }
     } catch (error: any) {
-      console.error('Login error:', error );
-      dispatch(loginFailure(error?.message || 'Login failed'));
-      showErrorAlert('Login Failed', 'Invalid credentials. Please try again.');
+
+      const msg = error?.response?.data?.error?.details?.error ?? error?.message ?? 'Login failed. Please try again.';
+      dispatch(loginFailure(msg));
+      setErrorMessage(msg);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -132,10 +138,29 @@ export default function LoginScreen() {
         <View className="px-6 -mt-6">
           <View className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 shadow-lg">
             
+            {/* Success Badge */}
+            {!!successMessage && (
+              <View className="flex-row items-center bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
+                <CheckCircleIcon size={18} color="#10B981" />
+                <Text className="text-green-700 text-sm ml-2 flex-1">{successMessage}</Text>
+              </View>
+            )}
+
+            {/* Error Badge */}
+            {!!errorMessage && (
+              <View className="flex-row items-start bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                <ExclamationCircleIcon size={18} color="#EF4444" />
+                <View className="flex-1 ml-2">
+                  <Text className="text-red-700 text-sm leading-5">{errorMessage}</Text>
+                  <Text className="text-red-500 text-xs mt-1">Need help? Contact support.</Text>
+                </View>
+              </View>
+            )}
+
             {/* Tab Toggle */}
             <View className="flex-row bg-gray-100 dark:bg-[#0F172A] rounded-full p-1 mb-6">
               <TouchableOpacity
-                onPress={() => setActiveTab('email')}
+                onPress={() => { setActiveTab('email'); setErrorMessage(''); }}
                 className={`flex-1 py-3 rounded-full flex-row items-center justify-center ${
                   activeTab === 'email' ? 'bg-primary-500' : ''
                 }`}
@@ -149,7 +174,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => setActiveTab('phone')}
+                onPress={() => { setActiveTab('phone'); setErrorMessage(''); }}
                 className={`flex-1 py-3 rounded-full flex-row items-center justify-center ${
                   activeTab === 'phone' ? 'bg-primary-500' : ''
                 }`}
@@ -247,12 +272,16 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             {/* Login Button */}
-            <TouchableOpacity onPress={handleLogin}>
+            <TouchableOpacity onPress={handleLogin} disabled={isLoading}>
               <LinearGradient
                 colors={['#F57C1F', '#E06A0F']}
                 className="py-4 rounded-full items-center shadow-lg"
               >
-                <Text className="text-white font-bold text-lg">Login</Text>
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white font-bold text-lg">Login</Text>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>

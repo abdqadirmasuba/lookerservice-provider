@@ -18,43 +18,55 @@ import {
   BuildingStorefrontIcon,
   DocumentTextIcon,
   MapPinIcon,
+  TruckIcon,
 } from 'react-native-heroicons/outline';
+import { CheckCircleIcon } from 'react-native-heroicons/solid';
 import { useDispatch, useSelector } from 'react-redux';
 import KeyboardAvoidingWrapper from '@/src/components/common/KeyboardAvoidingWrapper';
 import LocationPicker from '@/src/components/forms/LocationPicker';
-import { setBusinessInfo, setLocation } from '@/src/store/slices/businessRegistrationSlice';
+import {
+  setBusinessInfo,
+  setLocation,
+  ServiceDeliveryType,
+} from '@/src/store/slices/businessRegistrationSlice';
 import { RootState } from '@/src/store';
+
+const DELIVERY_TYPES: { value: ServiceDeliveryType; label: string; description: string }[] = [
+  { value: 'onsite', label: 'On-site', description: "You travel to the client's location" },
+  { value: 'remote', label: 'Remote', description: 'Service delivered online or remotely' },
+  { value: 'both', label: 'Both', description: 'On-site and remote options available' },
+];
 
 export default function BusinessStep1Screen() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const businessRegistration = useSelector(
-    (state: RootState) => state.businessRegistration
-  );
+  const reg = useSelector((state: RootState) => state.businessRegistration);
 
-  const [businessName, setBusinessName] = useState(
-    businessRegistration.business_name
-  );
-  const [description, setDescription] = useState(
-    businessRegistration.business_description
-  );
+  const [businessName, setBusinessName] = useState(reg.business_name);
+  const [description, setDescription] = useState(reg.business_description);
+  const [deliveryType, setDeliveryType] = useState<ServiceDeliveryType>(reg.service_delivery_type);
+
+  // location state — auto-filled from map, editable by user
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<any>(
-    businessRegistration.latitude && businessRegistration.longitude
-      ? {
-          latitude: businessRegistration.latitude,
-          longitude: businessRegistration.longitude,
-          address: businessRegistration.address,
-          city: businessRegistration.city,
-          state_region: businessRegistration.state_region,
-          country: businessRegistration.country,
-          postal_code: businessRegistration.postal_code,
-        }
-      : null
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(
+    reg.latitude && reg.longitude ? { latitude: reg.latitude, longitude: reg.longitude } : null
   );
+  const [address, setAddress] = useState(reg.address);
+  const [city, setCity] = useState(reg.city);
+  const [stateRegion, setStateRegion] = useState(reg.state_region);
+  const [country, setCountry] = useState(reg.country || 'Uganda');
+
+  const hasLocation = !!coords;
+
+  const handleLocationSelect = (location: any) => {
+    setCoords({ latitude: location.latitude, longitude: location.longitude });
+    setAddress(location.address || '');
+    setCity(location.city || '');
+    setStateRegion(location.state_region || '');
+    setCountry(location.country || 'Uganda');
+  };
 
   const handleNext = () => {
-    // Validation
     if (!businessName.trim()) {
       Alert.alert('Required', 'Please enter your business name');
       return;
@@ -63,25 +75,38 @@ export default function BusinessStep1Screen() {
       Alert.alert('Required', 'Please enter a business description');
       return;
     }
-    if (!selectedLocation) {
-      Alert.alert('Required', 'Please select your business location');
+    if (!deliveryType) {
+      Alert.alert('Required', 'Please select a service delivery type');
+      return;
+    }
+    if (!coords) {
+      Alert.alert('Required', 'Please pin your business location on the map');
+      return;
+    }
+    if (!address.trim() || !city.trim() || !stateRegion.trim() || !country.trim()) {
+      Alert.alert('Required', 'Please fill in all location fields');
       return;
     }
 
-    // Save to Redux store
     dispatch(
       setBusinessInfo({
         business_name: businessName,
         business_description: description,
+        service_delivery_type: deliveryType,
       })
     );
-    dispatch(setLocation(selectedLocation));
+    dispatch(
+      setLocation({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        address: address.trim(),
+        city: city.trim(),
+        state_region: stateRegion.trim(),
+        country: country.trim(),
+      })
+    );
 
     router.push('/(business)/register/step2');
-  };
-
-  const handleLocationSelect = (location: any) => {
-    setSelectedLocation(location);
   };
 
   return (
@@ -129,8 +154,7 @@ export default function BusinessStep1Screen() {
               </Text>
             </View>
 
-            {/* Form */}
-            <View className="space-y-4">
+            <View className="space-y-5">
               {/* Business Name */}
               <View>
                 <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -156,7 +180,7 @@ export default function BusinessStep1Screen() {
                 <View className="flex-row items-start bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4">
                   <DocumentTextIcon size={20} color="#6B7280" className="mt-4" />
                   <TextInput
-                    placeholder="Describe what your business does, services offered, specializations..."
+                    placeholder="Describe what your business does, services offered, specialisations..."
                     placeholderTextColor="#6B7280"
                     value={description}
                     onChangeText={setDescription}
@@ -172,46 +196,158 @@ export default function BusinessStep1Screen() {
                 </Text>
               </View>
 
-              {/* Location */}
+              {/* Service Delivery Type */}
+              <View>
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Service Delivery Type <Text className="text-red-500">*</Text>
+                </Text>
+                <View className="space-y-2">
+                  {DELIVERY_TYPES.map((type) => {
+                    const isSelected = deliveryType === type.value;
+                    return (
+                      <TouchableOpacity
+                        key={type.value}
+                        onPress={() => setDeliveryType(type.value)}
+                        className={`flex-row items-center p-4 rounded-xl border-2 ${
+                          isSelected
+                            ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500'
+                            : 'bg-white dark:bg-[#1E293B] border-gray-200 dark:border-[#334155]'
+                        }`}
+                      >
+                        <TruckIcon size={22} color={isSelected ? '#F57C1F' : '#6B7280'} />
+                        <View className="flex-1 ml-3">
+                          <Text
+                            className={`font-semibold text-sm ${
+                              isSelected
+                                ? 'text-primary-700 dark:text-primary-400'
+                                : 'text-gray-900 dark:text-white'
+                            }`}
+                          >
+                            {type.label}
+                          </Text>
+                          <Text
+                            className={`text-xs mt-0.5 ${
+                              isSelected
+                                ? 'text-primary-600 dark:text-primary-300'
+                                : 'text-gray-500 dark:text-gray-400'
+                            }`}
+                          >
+                            {type.description}
+                          </Text>
+                        </View>
+                        {isSelected && <CheckCircleIcon size={24} color="#F57C1F" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* ── Location Section ── */}
               <View>
                 <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Business Location <Text className="text-red-500">*</Text>
                 </Text>
+
+                {/* Map Picker Button */}
                 <TouchableOpacity
                   onPress={() => setLocationPickerVisible(true)}
-                  className="flex-row items-center bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4 py-4"
+                  className={`flex-row items-center rounded-xl px-4 py-4 mb-3 border-2 ${
+                    hasLocation
+                      ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-400'
+                      : 'bg-white dark:bg-[#1E293B] border-dashed border-gray-300 dark:border-[#334155]'
+                  }`}
                 >
-                  <MapPinIcon size={20} color="#6B7280" />
+                  <MapPinIcon size={22} color={hasLocation ? '#F57C1F' : '#6B7280'} />
                   <View className="flex-1 ml-3">
-                    {selectedLocation ? (
+                    {hasLocation ? (
                       <>
-                        <Text className="text-gray-900 dark:text-white font-medium">
-                          {selectedLocation.address}
+                        <Text className="text-primary-700 dark:text-primary-400 font-semibold text-sm">
+                          Location pinned on map
                         </Text>
-                        <Text className="text-xs text-gray-500 mt-1">
-                          {selectedLocation.city}, {selectedLocation.state_region}
+                        <Text className="text-xs text-primary-500 mt-0.5">
+                          {coords!.latitude.toFixed(5)}, {coords!.longitude.toFixed(5)}
                         </Text>
                       </>
                     ) : (
-                      <Text className="text-gray-500">Tap to select location</Text>
+                      <Text className="text-gray-500">Tap to pick location on map</Text>
                     )}
                   </View>
-                  <Text className="text-primary-500 font-medium">
-                    {selectedLocation ? 'Change' : 'Select'}
+                  <Text className="text-primary-500 font-semibold text-sm">
+                    {hasLocation ? 'Change' : 'Open Map'}
                   </Text>
                 </TouchableOpacity>
-                <Text className="text-xs text-gray-500 mt-1">
-                  Use map to pick your exact business location
+
+                {/* Editable location fields */}
+                <View className="space-y-3">
+                  <View>
+                    <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">
+                      Address
+                    </Text>
+                    <View className="flex-row items-center bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4">
+                      <MapPinIcon size={18} color="#9CA3AF" />
+                      <TextInput
+                        placeholder="Street / trading centre"
+                        placeholderTextColor="#9CA3AF"
+                        value={address}
+                        onChangeText={setAddress}
+                        className="flex-1 py-3 ml-2 text-gray-900 dark:text-white text-sm"
+                      />
+                    </View>
+                  </View>
+
+                  <View>
+                    <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">
+                      City / Town
+                    </Text>
+                    <TextInput
+                      placeholder="e.g., Gayaza"
+                      placeholderTextColor="#9CA3AF"
+                      value={city}
+                      onChangeText={setCity}
+                      className="bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm"
+                    />
+                  </View>
+
+                  <View className="flex-row space-x-3">
+                    <View className="flex-1">
+                      <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">
+                        State / Region
+                      </Text>
+                      <TextInput
+                        placeholder="e.g., Wakiso"
+                        placeholderTextColor="#9CA3AF"
+                        value={stateRegion}
+                        onChangeText={setStateRegion}
+                        className="bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm"
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">
+                        Country
+                      </Text>
+                      <TextInput
+                        placeholder="e.g., Uganda"
+                        placeholderTextColor="#9CA3AF"
+                        value={country}
+                        onChangeText={setCountry}
+                        className="bg-white dark:bg-[#1E293B] border border-gray-300 dark:border-[#334155] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm"
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <Text className="text-xs text-gray-500 mt-2">
+                  Use the map to pin your exact location. Fields auto-fill but can be edited.
                 </Text>
               </View>
 
-              {/* Info Box */}
+              {/* Tip */}
               <View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
                 <Text className="text-blue-700 dark:text-blue-400 text-sm font-semibold mb-1">
                   💡 Tip
                 </Text>
                 <Text className="text-blue-600 dark:text-blue-300 text-xs">
-                  A clear description and precise location helps clients find and trust your business more easily.
+                  A clear description, correct delivery type and precise location helps clients find and trust your business.
                 </Text>
               </View>
             </View>
@@ -237,7 +373,19 @@ export default function BusinessStep1Screen() {
         visible={locationPickerVisible}
         onClose={() => setLocationPickerVisible(false)}
         onSelect={handleLocationSelect}
-        initialLocation={selectedLocation}
+        initialLocation={
+          coords
+            ? {
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                address,
+                city,
+                state_region: stateRegion,
+                country,
+                postal_code: '',
+              }
+            : null
+        }
       />
     </SafeAreaView>
   );

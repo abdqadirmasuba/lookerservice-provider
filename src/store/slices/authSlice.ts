@@ -11,6 +11,7 @@ interface AuthState {
   isAuthenticated: boolean;
   token: string | null;
   refreshToken: string | null;
+  tempToken: string | null;
   providerBusinesses: ProviderBusiness[];
   activeBusinessId: string | null;
   isLoading: boolean;
@@ -21,6 +22,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   token: null,
   refreshToken: null,
+  tempToken: null,
   providerBusinesses: [],
   activeBusinessId: null,
   isLoading: false,
@@ -66,8 +68,11 @@ const authSlice = createSlice({
     setActiveBusiness: (state, action: PayloadAction<string>) => {
       state.activeBusinessId = action.payload;
     },
+    setTempToken: (state, action: PayloadAction<string | null>) => {
+      state.tempToken = action.payload;
+    },
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, updateToken, setActiveBusiness } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout, updateToken, setActiveBusiness, setTempToken } = authSlice.actions;
 export default authSlice.reducer;

@@ -7,7 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -22,14 +22,20 @@ import {
   UserIcon,
   CheckCircleIcon,
   ArrowLeftIcon,
+  ExclamationCircleIcon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon as CheckCircleSolid } from 'react-native-heroicons/solid';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useDispatch } from 'react-redux';
+import { setTempToken } from '@/src/store/slices/authSlice';
+import { apiRequests } from '@/src/utils/apiRequest';
+import KeyboardAvoidingWrapper from '@/src/components/common/KeyboardAvoidingWrapper';
 
 type TabType = 'email' | 'phone';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const { isDark, colors } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('email');
   const [showPassword, setShowPassword] = useState(false);
@@ -45,6 +51,8 @@ export default function RegisterScreen() {
 
   // Password strength
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const checkPasswordStrength = (pass: string) => {
     let strength = 0;
@@ -80,65 +88,84 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     // Validation
     if (!fullName.trim()) {
-      Alert.alert('Error', 'Please enter your full name');
+      setErrorMessage('Please enter your full name');
       return;
     }
 
     if (activeTab === 'email' && !email.trim()) {
-      Alert.alert('Error', 'Please enter your email address');
+      setErrorMessage('Please enter your email address');
       return;
     }
 
     if (activeTab === 'phone' && !phone.trim()) {
-      Alert.alert('Error', 'Please enter your phone number');
+      setErrorMessage('Please enter your phone number');
       return;
     }
 
     if (!password) {
-      Alert.alert('Error', 'Please enter a password');
+      setErrorMessage('Please enter a password');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setErrorMessage('Passwords do not match');
       return;
     }
 
     if (passwordStrength < 3) {
-      Alert.alert('Weak Password', 'Please use a stronger password with at least 3 requirements met');
+      setErrorMessage('Please use a stronger password with at least 3 requirements met');
       return;
     }
 
     if (!agreedToTerms) {
-      Alert.alert('Terms Required', 'Please agree to Terms & Conditions and Privacy Policy');
+      setErrorMessage('Please agree to Terms & Conditions and Privacy Policy');
       return;
     }
 
-    // TODO: Implement registration API call
-    console.log('Registering...', { fullName, email, phone, password });
-    
-    // Navigate to verification
-    if (activeTab === 'email') {
-      router.push({
-        pathname: '/(auth)/verify-email',
-        params: { email }
-      });
-    } else {
-      router.push({
-        pathname: '/(auth)/verify-phone',
-        params: { phone: `+256${phone}` }
-      });
+    setIsLoading(true);
+    setErrorMessage('');
+    try {
+      const payload: Record<string, string> = {
+        full_name: fullName,
+        password,
+        role: 'provider',
+      };
+      if (activeTab === 'email') {
+        payload.email = email.trim();
+      } else {
+        payload.phone = `+256${phone.trim()}`;
+      }
+
+      const response = await apiRequests.post('/auth/register', payload);
+      const { data } = response;
+
+      if (data?.success) {
+        const channel: string = data.data?.channel ?? activeTab;
+        const address: string = data.data?.address ?? (activeTab === 'email' ? email : `+256${phone}`);
+        const token: string = data.data?.temp_token ?? '';
+        dispatch(setTempToken(token));
+        if (channel === 'email') {
+          router.push({ pathname: '/(auth)/verify-email', params: { address } });
+        } else {
+          router.push({ pathname: '/(auth)/verify-phone', params: { address, channel } });
+        }
+      } else {
+        setErrorMessage(data?.message ?? 'Registration failed. Please try again.');
+      }
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ??
+        error?.message ??
+        'Registration failed. Please check your connection and try again.';
+      setErrorMessage(msg);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-dark-bg' : 'bg-white'}`}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
+    <KeyboardAvoidingWrapper>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1 }}
@@ -169,10 +196,27 @@ export default function RegisterScreen() {
           <View className="px-6 -mt-6 pb-8">
             <View className={`${isDark ? 'bg-dark-card' : 'bg-white'} rounded-3xl p-6 shadow-xl`}>
               
+              {/* Error Badge */}
+              {!!errorMessage && (
+                <View className={`flex-row items-start rounded-xl px-4 py-3 mb-4 border ${
+                  isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'
+                }`}>
+                  <ExclamationCircleIcon size={18} color="#EF4444" />
+                  <View className="flex-1 ml-2">
+                    <Text className={`text-sm leading-5 ${isDark ? 'text-red-300' : 'text-red-700'}`}>
+                      {errorMessage}
+                    </Text>
+                    <Text className={`text-xs mt-1 ${isDark ? 'text-red-400' : 'text-red-500'}`}>
+                      Need help? Contact support.
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               {/* Tab Toggle */}
               <View className={`flex-row ${isDark ? 'bg-dark-bg' : 'bg-gray-100'} rounded-full p-1 mb-6`}>
                 <TouchableOpacity
-                  onPress={() => setActiveTab('email')}
+                  onPress={() => { setActiveTab('email'); setErrorMessage(''); }}
                   className={`flex-1 py-3 rounded-full flex-row items-center justify-center ${
                     activeTab === 'email' ? 'bg-primary-500' : ''
                   }`}
@@ -186,7 +230,7 @@ export default function RegisterScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => setActiveTab('phone')}
+                  onPress={() => { setActiveTab('phone'); setErrorMessage(''); }}
                   className={`flex-1 py-3 rounded-full flex-row items-center justify-center ${
                     activeTab === 'phone' ? 'bg-primary-500' : ''
                   }`}
@@ -398,18 +442,22 @@ export default function RegisterScreen() {
               {/* Register Button */}
               <TouchableOpacity
                 onPress={handleRegister}
-                disabled={!agreedToTerms || passwordStrength < 3 || password !== confirmPassword}
+                disabled={isLoading || !agreedToTerms || passwordStrength < 3 || password !== confirmPassword}
                 activeOpacity={0.8}
               >
                 <LinearGradient
                   colors={
-                    agreedToTerms && passwordStrength >= 3 && password === confirmPassword
+                    !isLoading && agreedToTerms && passwordStrength >= 3 && password === confirmPassword
                       ? ['#F57C1F', '#E06A0F']
                       : ['#9CA3AF', '#6B7280']
                   }
                   className="py-4 rounded-full items-center shadow-lg"
                 >
-                  <Text className="text-white font-bold text-base">Create Account</Text>
+                  {isLoading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text className="text-white font-bold text-base">Create Account</Text>
+                  )}
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -425,7 +473,7 @@ export default function RegisterScreen() {
             </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingWrapper>
     </SafeAreaView>
   );
 }

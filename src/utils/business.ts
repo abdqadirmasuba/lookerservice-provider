@@ -3,16 +3,16 @@ import { apiRequests } from './apiRequest';
 export const registerBusiness = async (data: {
   business_name: string;
   business_description: string;
+  service_delivery_type: string;
   longitude: number;
   latitude: number;
   address: string;
   city: string;
   state_region: string;
   country: string;
-  postal_code: string;
   business_hours?: object;
   business_photos?: string[];
-  category_ids: string[];
+  group_ids: string[];
 }) => {
   try {
     const response = await apiRequests.post('/provider/register', data);
@@ -25,6 +25,15 @@ export const registerBusiness = async (data: {
 export const getCategories = async () => {
   try {
     const response = await apiRequests.get('/categories');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getActiveGroups = async () => {
+  try {
+    const response = await apiRequests.get('/provider/groups/active');
     return response.data;
   } catch (error) {
     throw error;

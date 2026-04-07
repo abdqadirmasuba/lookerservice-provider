@@ -4,8 +4,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
-  Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -15,21 +14,27 @@ import {
   PhoneIcon,
   ArrowPathIcon,
   ArrowLeftIcon,
+  ExclamationCircleIcon,
 } from 'react-native-heroicons/outline';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/store';
 import { useTheme } from '@/src/hooks/useTheme';
+import axios from 'axios';
+import { config } from '@/src/utils/apiConfig';
 
 export default function VerifyPhoneScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { isDark, colors } = useTheme();
   
-  const phone = params.phone as string || '+256701234567';
-  const flow = params.flow as string || 'register'; // 'register' or 'reset'
-  
+  const address = (params.address as string) || '+256701234567';
+  const tempToken = useSelector((state: RootState) => state.auth.tempToken);
+
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
@@ -49,8 +54,7 @@ export default function VerifyPhoneScreen() {
   }, []);
 
   useEffect(() => {
-    // Auto verify when all digits are entered
-    if (otp.every((digit) => digit !== '')) {
+    if (otp.every((digit) => digit !== '') && !isVerifying) {
       handleVerify();
     }
   }, [otp]);
@@ -77,43 +81,48 @@ export default function VerifyPhoneScreen() {
   const handleVerify = async () => {
     const code = otp.join('');
     if (code.length !== 6) {
-      Alert.alert('Error', 'Please enter the complete 6-digit code');
+      setErrorMessage('Please enter the complete 6-digit code');
       return;
     }
-
+    if (!tempToken) {
+      setErrorMessage('Session expired. Please register again.');
+      return;
+    }
     setIsVerifying(true);
-
-    // TODO: Implement OTP verification
-    console.log('Verifying OTP:', code);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsVerifying(false);
-      
-      if (flow === 'register') {
-        Alert.alert('Success', 'Phone verified successfully!', [
-          {
-            text: 'Continue',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]);
+    setErrorMessage('');
+    try {
+      const response = await axios.post(
+        `${config.domain_url}/auth/verify-otp`,
+        { code },
+        { headers: { Authorization: `Bearer ${tempToken}` } }
+      );
+      const data = response.data;
+      if (data?.success) {
+        router.replace({
+          pathname: '/(auth)/login',
+          params: { successMessage: data.message || 'Your account has been verified. You can now log in.' },
+        });
       } else {
-        router.push('/(auth)/reset-password');
+        setErrorMessage(data?.message || 'Verification failed. Please try again.');
       }
-    }, 1500);
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ??
+        error?.message ??
+        'Verification failed. Please try again.';
+      setErrorMessage(msg);
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleResend = async () => {
     if (!canResend) return;
-
-    // TODO: Implement resend OTP
-    console.log('Resending OTP to:', phone);
-    
     setResendTimer(60);
     setCanResend(false);
     setOtp(['', '', '', '', '', '']);
-    
-    Alert.alert('Code Sent', 'A new verification code has been sent');
+    setErrorMessage('');
+    // TODO: call resend OTP endpoint when available
     inputRefs.current[0]?.focus();
   };
 
@@ -144,17 +153,34 @@ export default function VerifyPhoneScreen() {
             <Text className={`text-center text-sm px-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               We sent a 6-digit code to
             </Text>
-            <Text className="text-primary-500 font-bold mt-1">{phone}</Text>
+            <Text className="text-primary-500 font-bold mt-1">{address}</Text>
           </View>
         </View>
 
         {/* OTP Input */}
         <View className="px-6">
+          {/* Error Badge */}
+          {!!errorMessage && (
+            <View className={`flex-row items-start rounded-xl px-4 py-3 mb-5 border ${
+              isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'
+            }`}>
+              <ExclamationCircleIcon size={18} color="#EF4444" />
+              <View className="flex-1 ml-2">
+                <Text className={`text-sm leading-5 ${isDark ? 'text-red-300' : 'text-red-700'}`}>
+                  {errorMessage}
+                </Text>
+                <Text className={`text-xs mt-1 ${isDark ? 'text-red-400' : 'text-red-500'}`}>
+                  Need help? Contact support.
+                </Text>
+              </View>
+            </View>
+          )}
+
           <View className="flex-row justify-between mb-8">
             {otp.map((digit, index) => (
               <TextInput
                 key={index}
-                // ref={(ref) => (inputRefs.current[index] = ref)}
+                ref={(ref) => { inputRefs.current[index] = ref; }}
                 value={digit}
                 onChangeText={(text) => handleChangeText(text, index)}
                 onKeyPress={(e) => handleKeyPress(e, index)}
@@ -186,9 +212,13 @@ export default function VerifyPhoneScreen() {
               }
               className="py-4 rounded-full items-center shadow-lg"
             >
-              <Text className="text-white font-bold text-base">
-                {isVerifying ? 'Verifying...' : 'Verify Code'}
-              </Text>
+              {isVerifying ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="text-white font-bold text-base">
+                  Verify Code
+                </Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 

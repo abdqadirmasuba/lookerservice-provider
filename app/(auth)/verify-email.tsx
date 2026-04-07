@@ -1,24 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   EnvelopeIcon,
-  CheckCircleIcon,
   ArrowPathIcon,
+  ArrowLeftIcon,
+  ExclamationCircleIcon,
 } from 'react-native-heroicons/outline';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/store';
 import { useTheme } from '@/src/hooks/useTheme';
+import axios from 'axios';
+import { config } from '@/src/utils/apiConfig';
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { isDark, colors } = useTheme();
-  const email = params.email as string || 'your@email.com';
-  
+
+  const address = (params.address as string) || 'your@email.com';
+  const tempToken = useSelector((state: RootState) => state.auth.tempToken);
+
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const inputRefs = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -31,131 +49,201 @@ export default function VerifyEmailScreen() {
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
-  const handleResend = async () => {
-    if (!canResend) return;
-
-    // TODO: Implement resend verification email
-    console.log('Resending verification email to:', email);
-    
-    setResendTimer(60);
-    setCanResend(false);
-    
-    Alert.alert('Email Sent', 'Verification email has been resent');
+  const handleChangeText = (text: string, index: number) => {
+    if (!/^\d*$/.test(text)) return;
+    const newOtp = [...otp];
+    newOtp[index] = text;
+    setOtp(newOtp);
+    if (text && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
   };
 
-  const handleOpenEmail = () => {
-    // Open default email app
-    Alert.alert('Open Email', 'Opening your email app...');
+  const handleKeyPress = (e: any, index: number) => {
+    if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerify = async () => {
+    const code = otp.join('');
+    if (code.length !== 6) {
+      setErrorMessage('Please enter the complete 6-digit code');
+      return;
+    }
+    if (!tempToken) {
+      setErrorMessage('Session expired. Please register again.');
+      return;
+    }
+    setIsVerifying(true);
+    setErrorMessage('');
+    try {
+      const response = await axios.post(
+        `${config.domain_url}/auth/verify-otp`,
+        { code },
+        { headers: { Authorization: `Bearer ${tempToken}` } }
+      );
+      const data = response.data;
+      if (data?.success) {
+        router.replace({
+          pathname: '/(auth)/login',
+          params: { successMessage: data.message || 'Your account has been verified. You can now log in.' },
+        });
+      } else {
+        setErrorMessage(data?.message || 'Verification failed. Please try again.');
+      }
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ??
+        error?.message ??
+        'Verification failed. Please try again.';
+      setErrorMessage(msg);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!canResend) return;
+    setResendTimer(60);
+    setCanResend(false);
+    setOtp(['', '', '', '', '', '']);
+    setErrorMessage('');
+    // TODO: call resend OTP endpoint when available
+    inputRefs.current[0]?.focus();
   };
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-dark-bg' : 'bg-white'}`}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      <View className="flex-1 px-6 justify-center">
-        {/* Icon */}
-        <View className="items-center mb-8">
-          <View className="w-32 h-32 bg-primary-100 rounded-full items-center justify-center mb-6">
-            <EnvelopeIcon size={64} color="#F57C1F" />
-            <View className="absolute -bottom-2 -right-2 w-12 h-12 bg-green-500 rounded-full items-center justify-center border-4 border-white">
-              <CheckCircleIcon size={24} color="#FFFFFF" />
-            </View>
-          </View>
-
-          <Text className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Verify Your Email
-          </Text>
-          <Text className={`text-center text-sm px-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            We've sent a verification link to
-          </Text>
-          <Text className="text-primary-500 font-bold mt-2">{email}</Text>
-        </View>
-
-        {/* Instructions */}
-        <View className={`${isDark ? 'bg-dark-card' : 'bg-gray-50'} rounded-2xl p-6 mb-6`}>
-          <Text className={`font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Next Steps:
-          </Text>
-          <View className="space-y-3">
-            <StepItem
-              number="1"
-              text="Check your email inbox"
-              isDark={isDark}
-            />
-            <StepItem
-              number="2"
-              text="Click the verification link in the email"
-              isDark={isDark}
-            />
-            <StepItem
-              number="3"
-              text="You'll be redirected to login"
-              isDark={isDark}
-            />
-          </View>
-        </View>
-
-        {/* Open Email Button */}
-        <TouchableOpacity onPress={handleOpenEmail} activeOpacity={0.8}>
-          <LinearGradient
-            colors={['#F57C1F', '#E06A0F']}
-            className="py-4 rounded-full items-center shadow-lg mb-4"
-          >
-            <Text className="text-white font-bold text-base">Open Email App</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* Resend Link */}
-        <View className="items-center">
-          <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
-            Didn't receive the email?
-          </Text>
+      <View className="flex-1">
+        {/* Header */}
+        <View className="px-6 pt-4 mb-8">
           <TouchableOpacity
-            onPress={handleResend}
-            disabled={!canResend}
-            className="flex-row items-center"
-            activeOpacity={0.7}
+            onPress={() => router.back()}
+            className="flex-row items-center mb-6"
           >
-            <ArrowPathIcon
-              size={16}
-              color={canResend ? '#F57C1F' : colors.textSecondary}
-            />
-            <Text
-              className={`ml-2 font-bold ${
-                canResend ? 'text-primary-500' : isDark ? 'text-gray-600' : 'text-gray-400'
-              }`}
-            >
-              {canResend ? 'Resend Email' : `Resend in ${resendTimer}s`}
+            <ArrowLeftIcon size={24} color={isDark ? '#FFF' : '#000'} />
+            <Text className={`ml-2 text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Back
             </Text>
           </TouchableOpacity>
+
+          <View className="items-center">
+            <View className="w-20 h-20 bg-primary-100 rounded-full items-center justify-center mb-4">
+              <EnvelopeIcon size={40} color="#F57C1F" />
+            </View>
+            <Text className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Enter Verification Code
+            </Text>
+            <Text className={`text-center text-sm px-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              We sent a 6-digit code to
+            </Text>
+            <Text className="text-primary-500 font-bold mt-1">{address}</Text>
+          </View>
         </View>
 
-        {/* Back to Login */}
-        <TouchableOpacity
-          onPress={() => router.replace('/(auth)/login')}
-          className="items-center mt-8"
-        >
-          <Text className="text-primary-500 font-bold">Back to Login</Text>
-        </TouchableOpacity>
+        {/* OTP Input */}
+        <View className="px-6">
+          {/* Error Badge */}
+          {!!errorMessage && (
+            <View className={`flex-row items-start rounded-xl px-4 py-3 mb-5 border ${
+              isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'
+            }`}>
+              <ExclamationCircleIcon size={18} color="#EF4444" />
+              <View className="flex-1 ml-2">
+                <Text className={`text-sm leading-5 ${isDark ? 'text-red-300' : 'text-red-700'}`}>
+                  {errorMessage}
+                </Text>
+                <Text className={`text-xs mt-1 ${isDark ? 'text-red-400' : 'text-red-500'}`}>
+                  Need help? Contact support.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <View className="flex-row justify-between mb-8">
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => { inputRefs.current[index] = ref; }}
+                value={digit}
+                onChangeText={(text) => handleChangeText(text, index)}
+                onKeyPress={(e) => handleKeyPress(e, index)}
+                keyboardType="number-pad"
+                maxLength={1}
+                selectTextOnFocus
+                className={`w-14 h-16 rounded-xl text-center text-2xl font-bold ${
+                  digit
+                    ? 'bg-primary-50 border-2 border-primary-500'
+                    : isDark
+                    ? 'bg-dark-card border border-dark-border'
+                    : 'bg-gray-100 border border-gray-300'
+                } ${isDark ? 'text-white' : 'text-gray-900'}`}
+              />
+            ))}
+          </View>
+
+          {/* Verify Button */}
+          <TouchableOpacity
+            onPress={handleVerify}
+            disabled={isVerifying || otp.some((d) => !d)}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={
+                isVerifying || otp.some((d) => !d)
+                  ? ['#9CA3AF', '#6B7280']
+                  : ['#F57C1F', '#E06A0F']
+              }
+              className="py-4 rounded-full items-center shadow-lg"
+            >
+              {isVerifying ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="text-white font-bold text-base">Verify Code</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Resend */}
+          <View className="items-center mt-6">
+            <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
+              Didn't receive the code?
+            </Text>
+            <TouchableOpacity
+              onPress={handleResend}
+              disabled={!canResend}
+              className="flex-row items-center"
+              activeOpacity={0.7}
+            >
+              <ArrowPathIcon
+                size={16}
+                color={canResend ? '#F57C1F' : colors.textSecondary}
+              />
+              <Text
+                className={`ml-2 font-bold ${
+                  canResend ? 'text-primary-500' : isDark ? 'text-gray-600' : 'text-gray-400'
+                }`}
+              >
+                {canResend ? 'Resend Code' : `Resend in ${resendTimer}s`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Change Email */}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="items-center mt-8"
+          >
+            <Text className="text-primary-500 font-bold">Change Email Address</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
-  );
-}
-
-// Helper Component
-function StepItem({ number, text, isDark }: { number: string; text: string; isDark: boolean }) {
-  return (
-    <View className="flex-row items-center">
-      <View className="w-6 h-6 bg-primary-500 rounded-full items-center justify-center mr-3">
-        <Text className="text-white text-xs font-bold">{number}</Text>
-      </View>
-      <Text className={`flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-        {text}
-      </Text>
-    </View>
   );
 }
