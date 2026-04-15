@@ -8,6 +8,8 @@ import {
   Image,
   Alert,
   Modal,
+  Dimensions,
+  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -45,6 +47,7 @@ export default function ServiceRequestDetailScreen() {
     status: string;
     booking_date: string;
   } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
   const activeBusinessId = useSelector((state: RootState) => state.auth.activeBusinessId);
 
@@ -140,7 +143,8 @@ export default function ServiceRequestDetailScreen() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    if (amount == null) return 'UGX N/A';
     return `UGX ${amount.toLocaleString()}`;
   };
 
@@ -155,15 +159,26 @@ export default function ServiceRequestDetailScreen() {
     });
   };
 
-  const parseImages = (imagesString: string): string[] => {
+  const parseImages = (imagesField: string | null | undefined): string[] => {
+    if (!imagesField || imagesField.trim() === '' || imagesField === 'null') return [];
+    // Try direct JSON parse first (e.g. '["url1","url2"]')
     try {
-      // The images field appears to be a base64 encoded JSON array
-      const decoded = atob(imagesString);
-      return JSON.parse(decoded);
-    } catch (error) {
-      console.error('Error parsing images:', error);
-      return [];
+      const parsed = JSON.parse(imagesField);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+      if (typeof parsed === 'string') return [parsed];
+    } catch {
+      // not a JSON string
     }
+    // Try base64-encoded JSON
+    try {
+      const decoded = atob(imagesField);
+      const parsed = JSON.parse(decoded);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch {
+      // not base64 JSON
+    }
+    // Fallback: treat as single URL or comma-separated URLs
+    return imagesField.split(',').map((s) => s.trim()).filter(Boolean);
   };
 
   if (isLoading) {
@@ -182,7 +197,7 @@ export default function ServiceRequestDetailScreen() {
     );
   }
 
-  const images = request.images ? parseImages(request.images) : [];
+  const images = parseImages(request.images);
   const isPending = request.provider_response.provider_response_type === 'pending';
 
   const formatBookingDate = (dateString: string) => {
@@ -196,9 +211,36 @@ export default function ServiceRequestDetailScreen() {
     });
   };
 
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-[#0F172A]">
       <StatusBar style="auto" />
+
+      {/* Full-screen image viewer */}
+      <Modal
+        visible={!!selectedImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedImage(null)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' }}
+          onPress={() => setSelectedImage(null)}
+        >
+          {selectedImage && (
+            <Image
+              source={{ uri: selectedImage }}
+              style={{ width: screenWidth, height: screenHeight * 0.75 }}
+              resizeMode="contain"
+            />
+          )}
+          <View style={{ position: 'absolute', top: 48, right: 20, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, padding: 8 }}>
+            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>Tap to close</Text>
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* Accept Confirmation Modal */}
       <Modal
@@ -487,24 +529,40 @@ export default function ServiceRequestDetailScreen() {
           </View>
 
           {/* Images */}
-          {images.length > 0 && (
-            <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4">
-              <Text className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3">
+          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-sm font-bold text-gray-500 dark:text-gray-400">
                 IMAGES
               </Text>
-              <View className="flex-row flex-wrap">
-                {images.map((imageUrl, index) => (
-                  <View key={index} className="w-1/3 p-1">
-                    <Image 
-                      source={{ uri: imageUrl }}
-                      className="w-full h-24 rounded-lg"
-                      resizeMode="cover"
-                    />
-                  </View>
-                ))}
-              </View>
+              {images.length > 0 && (
+                <Text className="text-xs text-gray-400">{images.length} photo{images.length !== 1 ? 's' : ''}</Text>
+              )}
             </View>
-          )}
+            {images.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View className="flex-row" style={{ gap: 8 }}>
+                  {images.map((imageUrl, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => setSelectedImage(imageUrl)}
+                      activeOpacity={0.85}
+                    >
+                      <Image
+                        source={{ uri: imageUrl }}
+                        style={{ width: 120, height: 120, borderRadius: 12 }}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            ) : (
+              <View className="items-center py-6">
+                <PhotoIcon size={32} color="#CBD5E1" />
+                <Text className="text-sm text-gray-400 dark:text-gray-500 mt-2">No images attached</Text>
+              </View>
+            )}
+          </View>
 
           {/* Additional Info */}
           {request.has_bid !== undefined && (

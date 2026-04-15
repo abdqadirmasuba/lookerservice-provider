@@ -289,51 +289,61 @@ export default function BookingsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 4 }}
-        className="mb-3"
+        style={{ flexGrow: 0, flexShrink: 0 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 6, gap: 8, alignItems: 'center' }}
+        className="mb-2"
       >
-        <View className="flex-row" style={{ gap: 8 }}>
-          {FILTER_TABS.map(({ key, label }) => {
-            const count = countFor(key);
-            const isActive = activeTab === key;
-            return (
-              <TouchableOpacity
-                key={key}
-                onPress={() => setActiveTab(key)}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  isActive ? 'bg-primary-500' : 'bg-white dark:bg-[#1E293B]'
-                }`}
+        {FILTER_TABS.map(({ key, label }) => {
+          const count = countFor(key);
+          const isActive = activeTab === key;
+          return (
+            <TouchableOpacity
+              key={key}
+              onPress={() => setActiveTab(key)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: 20,
+                backgroundColor: isActive ? '#F57C1F' : '#FFFFFF',
+                borderWidth: isActive ? 0 : 1,
+                borderColor: '#E5E7EB',
+              }}
+            >
+              <Text
                 style={{
-                  borderWidth: isActive ? 0 : 1,
-                  borderColor: '#E5E7EB',
+                  fontSize: 12,
+                  fontWeight: '600',
+                  color: isActive ? '#fff' : '#6B7280',
                 }}
               >
-                <Text
-                  className={`text-xs font-semibold ${
-                    isActive ? 'text-white' : 'text-gray-600 dark:text-gray-400'
-                  }`}
+                {label}
+              </Text>
+              {count > 0 && (
+                <View
+                  style={{
+                    marginLeft: 5,
+                    borderRadius: 10,
+                    paddingHorizontal: 5,
+                    paddingVertical: 1,
+                    backgroundColor: isActive ? 'rgba(255,255,255,0.3)' : '#F3F4F6',
+                  }}
                 >
-                  {label}
-                </Text>
-                {count > 0 && (
-                  <View
-                    className="ml-1.5 rounded-full px-1.5 py-0.5"
+                  <Text
                     style={{
-                      backgroundColor: isActive ? 'rgba(255,255,255,0.3)' : '#F3F4F6',
+                      fontSize: 10,
+                      fontWeight: '700',
+                      color: isActive ? '#fff' : '#6B7280',
                     }}
                   >
-                    <Text
-                      className="text-xs font-bold"
-                      style={{ color: isActive ? '#fff' : '#6B7280' }}
-                    >
-                      {count}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       <ScrollView
