@@ -71,11 +71,10 @@ export default function SettingsScreen() {
       items: [
         {
           id: 'notifications',
-          label: 'Push Notifications',
-          subtitle: 'Bookings, messages and updates',
+          label: 'Notifications',
+          subtitle: 'Push, SMS and email preferences',
           icon: <BellIcon size={20} color="#F59E0B" />,
-          type: 'toggle',
-          value: notifications,
+          type: 'nav',
         },
         {
           id: 'dark',
@@ -162,7 +161,14 @@ export default function SettingsScreen() {
               {section.items.map((item, idx) => (
                 <TouchableOpacity
                   key={item.id}
-                  onPress={() => item.type !== 'toggle' && handleToggle(item.id)}
+                  onPress={() => {
+                    if (item.type === 'toggle') return;
+                    if (item.id === 'notifications') {
+                      router.push('/(settings)/notifications');
+                    } else {
+                      handleToggle(item.id);
+                    }
+                  }}
                   activeOpacity={item.type === 'toggle' ? 1 : 0.7}
                   className={`flex-row items-center px-4 py-3.5 ${idx < section.items.length - 1 ? 'border-b border-gray-50 dark:border-slate-700' : ''}`}
                 >

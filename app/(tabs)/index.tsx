@@ -13,9 +13,10 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/src/store';
 import { apiRequests } from '@/src/utils/apiRequest';
+import { setUnreadCount } from '@/src/store/slices/notificationSlice';
 import { showErrorAlert } from '@/src/utils/alerts';
 import {
   BellIcon,
@@ -24,15 +25,14 @@ import {
   CheckCircleIcon,
   CurrencyDollarIcon,
   ChartBarIcon,
-  MapPinIcon,
-  StarIcon,
-  XCircleIcon,
-  XMarkIcon,
   BuildingStorefrontIcon,
+  ClipboardDocumentListIcon,
+  BanknotesIcon,
 } from 'react-native-heroicons/outline';
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,6 +41,7 @@ export default function DashboardScreen() {
   const providerBusinesses = useSelector((state: RootState) => state.auth.providerBusinesses);
   const activeBusinessId = useSelector((state: RootState) => state.auth.activeBusinessId);
   const userData = useSelector((state: RootState) => state.user.user);
+  const unreadCount = useSelector((state: RootState) => state.notifications.unreadCount);
 
   // Check if user has any registered businesses
   const hasBusinesses = providerBusinesses && providerBusinesses.length > 0;
@@ -67,20 +68,33 @@ export default function DashboardScreen() {
     }
   };
 
+  // Fetch unread notification count
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await apiRequests.get('/notifications/count');
+      if (response.data.success) {
+        dispatch(setUnreadCount(response.data.data.unread_count));
+      }
+    } catch (error: any) {
+      console.error('Unread count fetch error:', error);
+    }
+  };
+
   // Fetch data when active business is set
   useEffect(() => {
     if (activeBusinessId) {
       fetchDashboardData(activeBusinessId);
     }
+    fetchUnreadCount();
   }, [activeBusinessId]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
+    const tasks: Promise<any>[] = [fetchUnreadCount()];
     if (activeBusinessId) {
-      fetchDashboardData(activeBusinessId).finally(() => setRefreshing(false));
-    } else {
-      setRefreshing(false);
+      tasks.push(fetchDashboardData(activeBusinessId));
     }
+    Promise.all(tasks).finally(() => setRefreshing(false));
   }, [activeBusinessId]);
 
   const getStatusColor = (status: string) => {
@@ -146,9 +160,13 @@ export default function DashboardScreen() {
                 className="w-10 h-10 bg-white/20 rounded-full items-center justify-center"
               >
                 <BellIcon size={24} color="#FFFFFF" />
-                <View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
-                  <Text className="text-white text-xs font-bold">3</Text>
-                </View>
+                {unreadCount > 0 && (
+                  <View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+                    <Text className="text-white text-xs font-bold">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -309,24 +327,24 @@ export default function DashboardScreen() {
           </Text>
           <View className="flex-row flex-wrap -mx-2">
             <QuickLinkCard
-              icon={<MapPinIcon size={24} color="#F57C1F" />}
-              label="My Services"
-              onPress={() => router.push('/(services)/list')}
+              icon={<BuildingStorefrontIcon size={24} color="#F57C1F" />}
+              label="My Businesses"
+              onPress={() => router.push('/(business)/list')}
             />
             <QuickLinkCard
-              icon={<StarIcon size={24} color="#F57C1F" />}
+              icon={<ClipboardDocumentListIcon size={24} color="#F57C1F" />}
               label="Bids"
-              onPress={() => router.push('/(bids)/my-bids')}
+              onPress={() => router.push('/(bids)')}
             />
             <QuickLinkCard
-              icon={<CurrencyDollarIcon size={24} color="#F57C1F" />}
-              label="Earnings"
-              onPress={() => router.push('/(earnings)/dashboard')}
+              icon={<BanknotesIcon size={24} color="#F57C1F" />}
+              label="Transactions"
+              onPress={() => router.push('/(earnings)')}
             />
             <QuickLinkCard
               icon={<ChartBarIcon size={24} color="#F57C1F" />}
               label="Analytics"
-              onPress={() => router.push('/(business)/1/analytics')}
+              onPress={() => router.push(`/(business)/${activeBusinessId}/analytics`)}
             />
           </View>
         </View>

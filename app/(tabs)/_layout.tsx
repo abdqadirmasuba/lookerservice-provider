@@ -4,14 +4,12 @@ import {
   HomeIcon,
   ClipboardDocumentListIcon,
   CalendarDaysIcon,
-  ChatBubbleLeftRightIcon,
   UserCircleIcon,
 } from 'react-native-heroicons/outline';
 import {
   HomeIcon as HomeSolid,
   ClipboardDocumentListIcon as ClipboardSolid,
   CalendarDaysIcon as CalendarSolid,
-  ChatBubbleLeftRightIcon as ChatSolid,
   UserCircleIcon as UserSolid,
 } from 'react-native-heroicons/solid';
 
@@ -82,18 +80,6 @@ export default function TabLayout() {
               <CalendarSolid size={size} color={color} />
             ) : (
               <CalendarDaysIcon size={size} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: 'Messages',
-          tabBarIcon: ({ focused, color, size }) =>
-            focused ? (
-              <ChatSolid size={size} color={color} />
-            ) : (
-              <ChatBubbleLeftRightIcon size={size} color={color} />
             ),
         }}
       />

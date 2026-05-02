@@ -2,7 +2,7 @@ module.exports = ({ config }) => ({
   ...config,
   ios: {
     ...config.ios,
-    bundleIdentifier: "com.lookerservice.provider"
+    bundleIdentifier: "com.lookerservice.providerapp"
   },
   android: {
     ...config.android,

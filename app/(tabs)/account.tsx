@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,11 +61,19 @@ export default function AccountScreen() {
           <View className="items-center">
             {/* Profile Image */}
             <View className="relative mb-4">
-              <View className="w-24 h-24 bg-white rounded-full items-center justify-center">
-                <Text className="text-primary-500 text-4xl font-bold">
-                  {userData?.fullName.charAt(0)}
-                </Text>
-              </View>
+              {userData?.profileImage ? (
+                <Image
+                  source={{ uri: userData.profileImage }}
+                  className="w-24 h-24 rounded-full bg-white/20"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="w-24 h-24 bg-white rounded-full items-center justify-center">
+                  <Text className="text-primary-500 text-4xl font-bold">
+                    {userData?.fullName.charAt(0)}
+                  </Text>
+                </View>
+              )}
               <TouchableOpacity
                 onPress={() => router.push('/(settings)/profile')}
                 className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full items-center justify-center shadow-lg"
@@ -100,7 +108,7 @@ export default function AccountScreen() {
                   <CurrencyDollarIcon size={16} color="#FFF" />
                   <Text className="text-white text-xl font-bold ml-1">0</Text>
                 </View>
-                <Text className="text-white/70 text-xs">Earnings</Text>
+                <Text className="text-white/70 text-xs">Income</Text>
               </View>
             </View>
           </View>
@@ -141,9 +149,9 @@ export default function AccountScreen() {
             <Divider />
             <MenuItem
               icon={<CurrencyDollarIcon size={24} color="#F57C1F" />}
-              title="Earnings"
+              title="Transactions"
               subtitle="Track your income and payouts"
-              onPress={() => router.push('/(earnings)/dashboard')}
+              onPress={() => router.push('/(earnings)')}
               showBorder={false}
             />
           </View>

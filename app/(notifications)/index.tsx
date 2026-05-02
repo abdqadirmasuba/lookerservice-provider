@@ -1,227 +1,306 @@
-// File: app/(notifications)/index.tsx
+﻿// File: app/(notifications)/index.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/src/store';
+import { apiRequests } from '@/src/utils/apiRequest';
+import {
+  markOneRead,
+  markAllRead,
+  removeNotification,
+  clearAll,
+  setNotifications,
+  setUnreadCount,
+  Notification,
+} from '@/src/store/slices/notificationSlice';
 import {
   ArrowLeftIcon,
-  BellIcon,
-  CheckCircleIcon,
+  BellSlashIcon,
+  TrashIcon,
   ClockIcon,
-  XCircleIcon,
   InformationCircleIcon,
   ExclamationTriangleIcon,
+  BriefcaseIcon,
+  CurrencyDollarIcon,
+  ChatBubbleLeftEllipsisIcon,
+  CheckCircleIcon,
 } from 'react-native-heroicons/outline';
 
-interface Notification {
-  id: string;
-  type: 'booking' | 'payment' | 'system' | 'alert';
-  title: string;
-  message: string;
-  time: string;
-  isRead: boolean;
+function timeAgo(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getNotificationIcon(type: string, source: string) {
+  if (source === 'service_request') return <BriefcaseIcon size={22} color="#2DA9E9" />;
+  switch (type) {
+    case 'success': return <CheckCircleIcon size={22} color="#10B981" />;
+    case 'warning': return <ExclamationTriangleIcon size={22} color="#F59E0B" />;
+    case 'error': return <ExclamationTriangleIcon size={22} color="#EF4444" />;
+    case 'payment': return <CurrencyDollarIcon size={22} color="#10B981" />;
+    case 'message': return <ChatBubbleLeftEllipsisIcon size={22} color="#8B5CF6" />;
+    case 'info':
+    default: return <InformationCircleIcon size={22} color="#6B7280" />;
+  }
+}
+
+function getIconBg(type: string, source: string): string {
+  if (source === 'service_request') return 'bg-blue-100 dark:bg-blue-900/30';
+  switch (type) {
+    case 'success': return 'bg-green-100 dark:bg-green-900/30';
+    case 'warning': return 'bg-yellow-100 dark:bg-yellow-900/30';
+    case 'error': return 'bg-red-100 dark:bg-red-900/30';
+    case 'payment': return 'bg-emerald-100 dark:bg-emerald-900/30';
+    case 'message': return 'bg-purple-100 dark:bg-purple-900/30';
+    default: return 'bg-gray-100 dark:bg-gray-800';
+  }
 }
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const notifications = useSelector((state: RootState) => state.notifications.notifications);
+  const unreadCount = useSelector((state: RootState) => state.notifications.unreadCount);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Mock notifications data - replace with API call
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'booking',
-      title: 'New Booking Request',
-      message: 'You have a new booking request from John Doe for Plumbing Service.',
-      time: '5 mins ago',
-      isRead: false,
-    },
-    {
-      id: '2',
-      type: 'payment',
-      title: 'Payment Received',
-      message: 'You received UGX 150,000 for booking #BK12345.',
-      time: '1 hour ago',
-      isRead: false,
-    },
-    {
-      id: '3',
-      type: 'alert',
-      title: 'Service Review',
-      message: 'Jane Smith left a 5-star review for your service.',
-      time: '2 hours ago',
-      isRead: false,
-    },
-    {
-      id: '4',
-      type: 'system',
-      title: 'Profile Update',
-      message: 'Your business profile has been approved.',
-      time: '1 day ago',
-      isRead: true,
-    },
-    {
-      id: '5',
-      type: 'booking',
-      title: 'Booking Cancelled',
-      message: 'Booking #BK12340 has been cancelled by the client.',
-      time: '2 days ago',
-      isRead: true,
-    },
-  ]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const onRefresh = () => {
+  const fetchNotifications = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [unreadRes, countRes] = await Promise.all([
+        apiRequests.get('/notifications/unread'),
+        apiRequests.get('/notifications/count'),
+      ]);
+      if (unreadRes.data.success) {
+        dispatch(setNotifications(unreadRes.data.data));
+      }
+      if (countRes.data.success) {
+        dispatch(setUnreadCount(countRes.data.data.unread_count));
+      }
+    } catch (error: any) {
+      console.error('Notifications fetch error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Fetch notifications from API
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  };
+    await fetchNotifications();
+    setRefreshing(false);
+  }, [fetchNotifications]);
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications((prev) =>
-      prev.map((notif) =>
-        notif.id === notificationId ? { ...notif, isRead: true } : notif
-      )
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notif) => ({ ...notif, isRead: true }))
-    );
-  };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'booking':
-        return <ClockIcon size={24} color="#2DA9E9" />;
-      case 'payment':
-        return <CheckCircleIcon size={24} color="#10B981" />;
-      case 'alert':
-        return <ExclamationTriangleIcon size={24} color="#F59E0B" />;
-      case 'system':
-        return <InformationCircleIcon size={24} color="#6B7280" />;
-      default:
-        return <BellIcon size={24} color="#6B7280" />;
+  const handleMarkAsRead = async (notif: Notification) => {
+    if (notif.is_read) return;
+    try {
+      await apiRequests.patch(`/notifications/${notif.id}/read`);
+      dispatch(markOneRead(notif.id));
+    } catch (error: any) {
+      console.error('Mark read error:', error);
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const handleMarkAllRead = async () => {
+    try {
+      await apiRequests.post('/notifications/mark-all-read');
+      dispatch(markAllRead());
+    } catch (error: any) {
+      console.error('Mark all read error:', error);
+    }
+  };
+
+  const handleClearOne = async (id: string) => {
+    try {
+      await apiRequests.delete(`/notifications/${id}`);
+      dispatch(removeNotification(id));
+    } catch (error: any) {
+      console.error('Clear notification error:', error);
+    }
+  };
+
+  const handleClearAll = () => {
+    Alert.alert(
+      'Clear All Notifications',
+      'Are you sure you want to delete all notifications? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiRequests.delete('/notifications');
+              dispatch(clearAll());
+            } catch (error: any) {
+              console.error('Clear all error:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-[#0F172A]">
       <StatusBar style="auto" />
 
       {/* Header */}
-      <View className="px-6 pt-4 pb-4 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
+      <View className="px-4 pt-4 pb-3 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1">
-            <TouchableOpacity onPress={() => router.back()} className="mr-4">
-              <ArrowLeftIcon size={24} color="#6B7280" />
+            <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
+              <ArrowLeftIcon size={22} color="#6B7280" />
             </TouchableOpacity>
             <View>
               <Text className="text-xl font-bold text-gray-900 dark:text-white">
                 Notifications
               </Text>
               {unreadCount > 0 && (
-                <Text className="text-sm text-gray-500 dark:text-gray-400">
+                <Text className="text-xs text-gray-500 dark:text-gray-400">
                   {unreadCount} unread
                 </Text>
               )}
             </View>
           </View>
-          {unreadCount > 0 && (
-            <TouchableOpacity
-              onPress={markAllAsRead}
-              className="px-3 py-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg"
-            >
-              <Text className="text-primary-500 font-semibold text-sm">
-                Mark all read
-              </Text>
-            </TouchableOpacity>
-          )}
+          <View className="flex-row items-center" style={{ gap: 8 }}>
+            {unreadCount > 0 && (
+              <TouchableOpacity
+                onPress={handleMarkAllRead}
+                className="px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 rounded-lg"
+              >
+                <Text className="text-primary-500 font-semibold text-xs">Mark all read</Text>
+              </TouchableOpacity>
+            )}
+            {notifications.length > 0 && (
+              <TouchableOpacity
+                onPress={handleClearAll}
+                className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg"
+              >
+                <TrashIcon size={18} color="#EF4444" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#F57C1F"
-          />
-        }
-      >
-        <View className="px-6 py-4">
-          {notifications.length > 0 ? (
-            notifications.map((notification) => (
-              <TouchableOpacity
-                key={notification.id}
-                onPress={() => markAsRead(notification.id)}
-                className={`mb-3 rounded-2xl p-4 border ${
-                  notification.isRead
-                    ? 'bg-white dark:bg-[#1E293B] border-gray-200 dark:border-[#334155]'
-                    : 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800'
-                }`}
-              >
-                <View className="flex-row">
-                  <View className="w-12 h-12 bg-gray-100 dark:bg-[#0F172A] rounded-full items-center justify-center mr-3">
-                    {getNotificationIcon(notification.type)}
-                  </View>
-                  <View className="flex-1">
-                    <View className="flex-row items-start justify-between mb-1">
-                      <Text
-                        className={`text-base font-bold flex-1 ${
-                          notification.isRead
-                            ? 'text-gray-900 dark:text-white'
-                            : 'text-gray-900 dark:text-white'
-                        }`}
-                      >
-                        {notification.title}
-                      </Text>
-                      {!notification.isRead && (
-                        <View className="w-2 h-2 bg-primary-500 rounded-full ml-2 mt-1.5" />
-                      )}
-                    </View>
-                    <Text
-                      className={`text-sm mb-2 ${
-                        notification.isRead
-                          ? 'text-gray-600 dark:text-gray-400'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {notification.message}
-                    </Text>
-                    <Text className="text-xs text-gray-500 dark:text-gray-500">
-                      {notification.time}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View className="items-center justify-center py-20">
-              <BellIcon size={64} color="#9CA3AF" />
-              <Text className="text-gray-600 dark:text-gray-400 mt-4 text-center">
-                No notifications yet
-              </Text>
-              <Text className="text-gray-500 dark:text-gray-500 text-sm text-center mt-2 px-8">
-                We'll notify you when something important happens
-              </Text>
-            </View>
-          )}
+      {isLoading && notifications.length === 0 ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#F57C1F" />
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F57C1F" />
+          }
+        >
+          <View className="px-4 py-4">
+            {notifications.length === 0 ? (
+              <View className="items-center justify-center py-20">
+                <View className="w-20 h-20 bg-gray-100 dark:bg-[#1E293B] rounded-full items-center justify-center mb-4">
+                  <BellSlashIcon size={36} color="#9CA3AF" />
+                </View>
+                <Text className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  All caught up!
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400 text-center px-8">
+                  You have no unread notifications right now.
+                </Text>
+              </View>
+            ) : (
+              notifications.map((notif) => (
+                <TouchableOpacity
+                  key={notif.id}
+                  onPress={() => handleMarkAsRead(notif)}
+                  activeOpacity={0.75}
+                  className={`mb-3 rounded-2xl border overflow-hidden ${
+                    notif.is_read
+                      ? 'bg-white dark:bg-[#1E293B] border-gray-200 dark:border-[#334155]'
+                      : 'bg-orange-50 dark:bg-[#1E293B] border-orange-200 dark:border-orange-800/40'
+                  }`}
+                >
+                  <View className="flex-row p-4">
+                    {!notif.is_read && (
+                      <View className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500" />
+                    )}
+                    <View
+                      className={`w-11 h-11 rounded-full items-center justify-center mr-3 flex-shrink-0 ${getIconBg(notif.type, notif.source)}`}
+                    >
+                      {getNotificationIcon(notif.type, notif.source)}
+                    </View>
+                    <View className="flex-1">
+                      <View className="flex-row items-start justify-between mb-0.5">
+                        <Text
+                          className="text-sm font-bold text-gray-900 dark:text-white flex-1 mr-2"
+                          numberOfLines={1}
+                        >
+                          {notif.title}
+                        </Text>
+                        {!notif.is_read && (
+                          <View className="w-2 h-2 bg-primary-500 rounded-full mt-1.5 flex-shrink-0" />
+                        )}
+                      </View>
+                      <Text
+                        className="text-xs text-gray-600 dark:text-gray-400 leading-4 mb-2"
+                        numberOfLines={2}
+                      >
+                        {notif.message}
+                      </Text>
+                      <View className="flex-row items-center justify-between">
+                        <View className="flex-row items-center">
+                          <ClockIcon size={12} color="#9CA3AF" />
+                          <Text className="text-xs text-gray-400 dark:text-gray-500 ml-1">
+                            {timeAgo(notif.created_at)}
+                          </Text>
+                        </View>
+                        <View className="flex-row items-center" style={{ gap: 8 }}>
+                          <View className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                            <Text className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                              {notif.source.replace(/_/g, ' ')}
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => handleClearOne(notif.id)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <TrashIcon size={14} color="#9CA3AF" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+          <View className="h-8" />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

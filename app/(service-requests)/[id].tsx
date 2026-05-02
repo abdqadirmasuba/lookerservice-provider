@@ -10,6 +10,7 @@ import {
   Modal,
   Dimensions,
   Pressable,
+  TextInput,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -48,6 +49,9 @@ export default function ServiceRequestDetailScreen() {
     booking_date: string;
   } | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionError, setRejectionError] = useState('');
   
   const activeBusinessId = useSelector((state: RootState) => state.auth.activeBusinessId);
 
@@ -102,35 +106,27 @@ export default function ServiceRequestDetailScreen() {
   };
 
   const handleRejectRequest = () => {
-    Alert.alert(
-      'Reject Request',
-      'Are you sure you want to reject this service request?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: confirmRejectRequest,
-        },
-      ]
-    );
+    setRejectionReason('');
+    setRejectionError('');
+    setShowRejectModal(true);
   };
 
   const confirmRejectRequest = async () => {
+    const trimmed = rejectionReason.trim();
+    if (trimmed.length < 10) {
+      setRejectionError('Reason must be at least 10 characters.');
+      return;
+    }
+    setShowRejectModal(false);
     setIsSubmitting(true);
     try {
       const response = await apiRequests.post(
-        `/provider/${activeBusinessId}/service-requests/${id}/reject`
+        `/provider/${activeBusinessId}/service-requests/${id}/reject`,
+        { rejection_reason: trimmed }
       );
       if (response.data.success) {
-        Alert.alert('Success', 'Service request rejected', [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
+        Alert.alert('Request Rejected', 'The service request has been rejected.', [
+          { text: 'OK', onPress: () => router.back() },
         ]);
       } else {
         showErrorAlert('Error', response.data.message || 'Failed to reject request');
@@ -159,8 +155,12 @@ export default function ServiceRequestDetailScreen() {
     });
   };
 
-  const parseImages = (imagesField: string | null | undefined): string[] => {
-    if (!imagesField || imagesField.trim() === '' || imagesField === 'null') return [];
+  const parseImages = (imagesField: any): string[] => {
+    if (!imagesField) return [];
+    // API may return an array directly
+    if (Array.isArray(imagesField)) return imagesField.filter(Boolean);
+    if (typeof imagesField !== 'string') return [];
+    if (imagesField.trim() === '' || imagesField === 'null') return [];
     // Try direct JSON parse first (e.g. '["url1","url2"]')
     try {
       const parsed = JSON.parse(imagesField);
@@ -240,6 +240,68 @@ export default function ServiceRequestDetailScreen() {
             <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>Tap to close</Text>
           </View>
         </Pressable>
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal
+        visible={showRejectModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRejectModal(false)}
+      >
+        <View className="flex-1 bg-black/50 items-center justify-center px-6">
+          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 w-full">
+            <View className="items-center mb-4">
+              <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-3">
+                <XCircleIcon size={32} color="#EF4444" />
+              </View>
+              <Text className="text-xl font-bold text-gray-900 dark:text-white">
+                Reject Request
+              </Text>
+              <Text className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
+                Please provide a reason for rejecting this request.
+              </Text>
+            </View>
+
+            <TextInput
+              value={rejectionReason}
+              onChangeText={(t) => {
+                setRejectionReason(t);
+                if (rejectionError) setRejectionError('');
+              }}
+              placeholder="e.g. I am fully booked for the requested dates…"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              className="border border-gray-300 dark:border-[#334155] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm mb-1"
+              style={{ minHeight: 96 }}
+            />
+            <View className="flex-row justify-between mb-4">
+              {rejectionError ? (
+                <Text className="text-xs text-red-500">{rejectionError}</Text>
+              ) : (
+                <Text className="text-xs text-gray-400">Minimum 10 characters</Text>
+              )}
+              <Text className="text-xs text-gray-400">{rejectionReason.trim().length} chars</Text>
+            </View>
+
+            <View className="flex-row space-x-3">
+              <TouchableOpacity
+                onPress={() => setShowRejectModal(false)}
+                className="flex-1 py-3 border border-gray-300 dark:border-[#334155] rounded-xl items-center"
+              >
+                <Text className="font-semibold text-gray-600 dark:text-gray-400">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={confirmRejectRequest}
+                className="flex-1 py-3 bg-red-500 rounded-xl items-center"
+              >
+                <Text className="font-semibold text-white">Confirm Reject</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* Accept Confirmation Modal */}
