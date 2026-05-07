@@ -5,6 +5,8 @@ export interface ProviderBusiness {
   business_name: string;
   last_accessed?: string;
   is_last_accessed?: boolean;
+  logo_url?: string;
+  address?: string;
 }
 
 interface AuthState {
@@ -14,6 +16,7 @@ interface AuthState {
   tempToken: string | null;
   providerBusinesses: ProviderBusiness[];
   activeBusinessId: string | null;
+  providerTier: 'free' | 'pro';
   isLoading: boolean;
   error: string | null;
 }
@@ -25,6 +28,7 @@ const initialState: AuthState = {
   tempToken: null,
   providerBusinesses: [],
   activeBusinessId: null,
+  providerTier: 'free',
   isLoading: false,
   error: null,
 };
@@ -37,10 +41,11 @@ const authSlice = createSlice({
       state.isLoading = true;
       state.error = null;
     },
-    loginSuccess: (state, action: PayloadAction<{ token: string; refreshToken: string; providerBusinesses?: ProviderBusiness[] }>) => {
+    loginSuccess: (state, action: PayloadAction<{ token: string; refreshToken: string; providerBusinesses?: ProviderBusiness[]; providerTier?: 'free' | 'pro' }>) => {
       state.isAuthenticated = true;
       state.token = action.payload.token;
       state.refreshToken = action.payload.refreshToken;
+      state.providerTier = action.payload.providerTier ?? 'free';
       if (action.payload.providerBusinesses) {
         state.providerBusinesses = action.payload.providerBusinesses;
         // Set active business from is_last_accessed flag
@@ -60,6 +65,7 @@ const authSlice = createSlice({
       state.refreshToken = null;
       state.providerBusinesses = [];
       state.activeBusinessId = null;
+      state.providerTier = 'free';
       state.error = null;
     },
     updateToken: (state, action: PayloadAction<string>) => {

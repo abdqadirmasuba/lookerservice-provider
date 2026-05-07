@@ -1,8 +1,10 @@
+import '../global.css'; 
 import { Stack } from 'expo-router';
 import { Provider } from 'react-redux';
 import { store } from '../src/store';
-import '../global.css';
 import * as Notifications from 'expo-notifications';
+import NetworkMonitor from '@/src/components/common/NetworkMonitor';
+import OfflineToast from '@/src/components/common/OfflineToast';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -16,6 +18,7 @@ Notifications.setNotificationHandler({
 export default function RootLayout() {
   return (
     <Provider store={store}>
+      <NetworkMonitor />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="auth-loading" />
@@ -32,6 +35,7 @@ export default function RootLayout() {
         <Stack.Screen name="(notifications)" />
         <Stack.Screen name="(service-requests)" />
       </Stack>
+      <OfflineToast />
     </Provider>
   );
 }

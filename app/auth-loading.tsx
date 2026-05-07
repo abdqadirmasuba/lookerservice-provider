@@ -1,7 +1,7 @@
 // File: app/auth-loading.tsx
 
-import React, { useEffect } from 'react';
-import { Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
@@ -20,15 +20,32 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { WifiIcon, ArrowPathIcon } from 'react-native-heroicons/outline';
 
 const ONBOARDING_KEY = '@hasSeenOnboarding';
+const NETWORK_TIMEOUT_MS = 10_000;
+
 import { config } from '@/src/utils/apiConfig';
 const API_BASE_URL = config.domain_url;
+
+/** Races a promise against a timeout. Rejects with code 'NETWORK_TIMEOUT' if the deadline passes first. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(Object.assign(new Error('Request timed out'), { code: 'NETWORK_TIMEOUT' })),
+        ms,
+      ),
+    ),
+  ]);
+}
 
 export default function AuthLoadingScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
   const logoScale = useSharedValue(1);
+  const [status, setStatus] = useState<'loading' | 'error'>('loading');
 
   useEffect(() => {
     logoScale.value = withRepeat(
@@ -47,6 +64,7 @@ export default function AuthLoadingScreen() {
   }));
 
   const checkAuthStatus = async () => {
+    setStatus('loading');
     try {
       // Step 1: Check if user has seen onboarding
       const hasSeenOnboarding = await AsyncStorage.getItem(ONBOARDING_KEY);      
@@ -66,14 +84,17 @@ export default function AuthLoadingScreen() {
         }, 1000);
         return;
       }
-      // Step 3: Try to refresh authentication
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`,
-        },
-      });
+      // Step 3: Try to refresh authentication (with network timeout)
+      const response = await withTimeout(
+        fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${refreshToken}`,
+          },
+        }),
+        NETWORK_TIMEOUT_MS,
+      );
       if (!response.ok) {
         await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
         setTimeout(() => {
@@ -109,6 +130,17 @@ export default function AuthLoadingScreen() {
       }, 500);
       
     } catch (error: any) {
+      const isNetworkError =
+        (error as any)?.code === 'NETWORK_TIMEOUT' ||
+        error?.message === 'NETWORK_TIMEOUT' ||
+        error?.message?.includes('Network request failed') ||
+        error?.message?.includes('Failed to fetch');
+
+      if (isNetworkError) {
+        setStatus('error');
+        return;
+      }
+
       console.error('Auth check failed:', error);
       dispatch(loginFailure(error?.message || 'Auth check failed'));
       await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
@@ -117,6 +149,31 @@ export default function AuthLoadingScreen() {
       }, 500);
     }
   };
+
+  if (status === 'error') {
+    return (
+      <SafeAreaView className="flex-1 bg-primary-500 items-center justify-center px-8">
+        <StatusBar style="light" />
+        <View className="items-center gap-4">
+          <WifiIcon size={56} color="#fff" strokeWidth={1.5} />
+          <Text className="text-white text-2xl font-bold text-center mt-2">
+            Connection Problem
+          </Text>
+          <Text className="text-white/80 text-base text-center leading-relaxed">
+            Unable to reach the server. Please check your internet connection and try again.
+          </Text>
+          <TouchableOpacity
+            onPress={checkAuthStatus}
+            className="mt-4 flex-row items-center gap-2 bg-white/20 px-6 py-3 rounded-full border border-white/40"
+            activeOpacity={0.75}
+          >
+            <ArrowPathIcon size={18} color="#fff" strokeWidth={2} />
+            <Text className="text-white font-semibold text-base">Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-primary-500 items-center justify-center">

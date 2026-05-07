@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -40,6 +41,7 @@ export default function DashboardScreen() {
   // Get provider businesses and active business from Redux
   const providerBusinesses = useSelector((state: RootState) => state.auth.providerBusinesses);
   const activeBusinessId = useSelector((state: RootState) => state.auth.activeBusinessId);
+  const providerTier = useSelector((state: RootState) => state.auth.providerTier);
   const userData = useSelector((state: RootState) => state.user.user);
   const unreadCount = useSelector((state: RootState) => state.notifications.unreadCount);
 
@@ -141,8 +143,8 @@ export default function DashboardScreen() {
               <Text className="text-white text-xl font-bold mt-1">{userData?.fullName || 'Provider'}</Text>
             </View>
             <View className="flex-row items-center">
-              {/* Business Switcher Icon - Show if more than one business */}
-              {businessCount > 1 && (
+              {/* Business Switcher Icon - Pro tier only, when multiple businesses exist */}
+              {providerTier === 'pro' && businessCount > 1 && (
                 <TouchableOpacity
                   onPress={() => router.push('/(business)/switch-business')}
                   className="w-10 h-10 bg-white/20 rounded-full items-center justify-center mr-3"
@@ -176,16 +178,30 @@ export default function DashboardScreen() {
             <View className="mb-4">
               <Text className="text-white/80 text-xs mb-2">Active Business</Text>
               <View className="bg-white rounded-2xl px-4 py-3">
-                <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center">
+                  {/* Business Logo or Initial Avatar */}
+                  <View className="w-12 h-12 bg-primary-50 rounded-xl items-center justify-center mr-3 overflow-hidden">
+                    {activeBusiness.logo_url ? (
+                      <Image
+                        source={{ uri: activeBusiness.logo_url }}
+                        className="w-12 h-12"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text className="text-primary-500 font-bold text-xl">
+                        {activeBusiness.business_name.charAt(0).toUpperCase()}
+                      </Text>
+                    )}
+                  </View>
                   <View className="flex-1">
-                    <Text className="text-primary-500 font-bold text-base">
+                    <Text className="text-gray-900 font-bold text-base">
                       {activeBusiness.business_name}
                     </Text>
-                    <Text className="text-gray-500 text-xs mt-1">
-                      {businessCount} {businessCount === 1 ? 'business' : 'businesses'} registered
+                    <Text className="text-gray-500 text-xs mt-0.5">
+                      {activeBusiness.address || 'Address not set'}
                     </Text>
                   </View>
-                  {businessCount > 1 && (
+                  {providerTier === 'pro' && businessCount > 1 && (
                     <TouchableOpacity
                       onPress={() => router.push('/(business)/switch-business')}
                       className="px-3 py-1.5 bg-primary-50 rounded-lg"

@@ -179,11 +179,13 @@ export default function VerifyEmailScreen() {
                 selectTextOnFocus
                 className={`w-14 h-16 rounded-xl text-center text-2xl font-bold ${
                   digit
-                    ? 'bg-primary-50 border-2 border-primary-500'
+                    ? isDark
+                      ? 'bg-blue-900/30 border-2 border-blue-500 text-white'
+                      : 'bg-blue-50 border-2 border-blue-600 text-gray-900'
                     : isDark
-                    ? 'bg-dark-card border border-dark-border'
-                    : 'bg-gray-100 border border-gray-300'
-                } ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    ? 'bg-dark-card border border-dark-border text-white'
+                    : 'bg-gray-100 border border-gray-300 text-gray-900'
+                }`}
               />
             ))}
           </View>
@@ -223,11 +225,12 @@ export default function VerifyEmailScreen() {
             >
               <ArrowPathIcon
                 size={16}
-                color={canResend ? '#F57C1F' : colors.textSecondary}
+                color={canResend ? '#2563EB' : colors.textSecondary}
               />
               <Text
+                style={{ color: canResend ? '#2563EB' : undefined }}
                 className={`ml-2 font-bold ${
-                  canResend ? 'text-primary-500' : isDark ? 'text-gray-600' : 'text-gray-400'
+                  canResend ? '' : isDark ? 'text-gray-600' : 'text-gray-400'
                 }`}
               >
                 {canResend ? 'Resend Code' : `Resend in ${resendTimer}s`}
@@ -240,7 +243,7 @@ export default function VerifyEmailScreen() {
             onPress={() => router.back()}
             className="items-center mt-8"
           >
-            <Text className="text-primary-500 font-bold">Change Email Address</Text>
+            <Text style={{ color: '#0891B2' }} className="font-bold">Change Email Address</Text>
           </TouchableOpacity>
         </View>
       </View>

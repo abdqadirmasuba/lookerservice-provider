@@ -8,14 +8,14 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  useColorScheme,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
-  ArrowLeftIcon,
   ClockIcon,
+  XMarkIcon,
 } from 'react-native-heroicons/outline';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -45,10 +45,33 @@ function isValidTime(t: string) {
   return /^\d{2}:\d{2}$/.test(t);
 }
 
+const TOTAL_STEPS = 4;
+const CURRENT_STEP = 2;
+const STEP_LABELS = ['Business Info', 'Hours', 'Service Area', 'Review'];
+
 export default function BusinessStep2Screen() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const reg = useSelector((state: RootState) => state.businessRegistration);
+
+  const handleClose = () => {
+    Alert.alert(
+      'Cancel Registration',
+      'Your registration progress will be lost. Are you sure you want to exit?',
+      [
+        { text: 'Stay', style: 'cancel' },
+        { text: 'Exit', style: 'destructive', onPress: () => router.replace('/(tabs)') },
+      ],
+    );
+  };
+
+  const navigateToStep = (step: number) => {
+    if (step < CURRENT_STEP) {
+      router.push(`/(business)/register/step${step}` as any);
+    }
+  };
 
   const [hours, setHours] = useState<{ [key: string]: DayHoursState }>(
     DAYS.reduce((acc, day) => {
@@ -107,43 +130,49 @@ export default function BusinessStep2Screen() {
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-[#0F172A]">
       <StatusBar style="auto" />
 
-      {/* Header */}
-      <View className="px-6 pt-4 pb-4 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
-        <View className="flex-row items-center mb-4">
-          <TouchableOpacity onPress={() => router.back()} className="mr-4">
-            <ArrowLeftIcon size={24} color="#6B7280" />
-          </TouchableOpacity>
-          <View className="flex-1">
-            <Text className="text-xl font-bold text-gray-900 dark:text-white">
+      {/* Fixed Header */}
+      <View className="px-5 pt-3 pb-3 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
+        <View className="flex-row items-center justify-between mb-3">
+          <View>
+            <Text className="text-base font-bold text-gray-900 dark:text-white">
               Register Business
             </Text>
-            <Text className="text-sm text-gray-600 dark:text-gray-400">
-              Step 2 of 5
+            <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Step {CURRENT_STEP} of {TOTAL_STEPS} — {STEP_LABELS[CURRENT_STEP - 1]}
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={handleClose}
+            className="w-8 h-8 bg-gray-100 dark:bg-[#334155] rounded-full items-center justify-center"
+          >
+            <XMarkIcon size={16} color="#6B7280" />
+          </TouchableOpacity>
         </View>
-        <View className="h-2 bg-gray-200 dark:bg-[#334155] rounded-full overflow-hidden">
-          <View className="h-full w-[40%] bg-primary-500 rounded-full" />
+        <View className="flex-row" style={{ gap: 5 }}>
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <TouchableOpacity
+              key={i}
+              onPress={() => navigateToStep(i + 1)}
+              disabled={i + 1 >= CURRENT_STEP}
+              style={{
+                flex: 1,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: i + 1 <= CURRENT_STEP ? '#F97316' : isDark ? '#334155' : '#E5E7EB',
+              }}
+            />
+          ))}
         </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         <View className="px-6 py-6">
-          {/* Step Icon */}
-          <View className="items-center mb-6">
-            <LinearGradient
-              colors={['#F57C1F', '#E06A0F']}
-              className="w-20 h-20 rounded-full items-center justify-center mb-4"
-            >
-              <ClockIcon size={40} color="#FFFFFF" />
-            </LinearGradient>
-            <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Business Hours
-            </Text>
-            <Text className="text-sm text-center text-gray-600 dark:text-gray-400 px-8">
-              Set your operating schedule for each day
-            </Text>
-          </View>
+          <Text className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+            Business Hours
+          </Text>
+          <Text className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+            Set your operating schedule for each day
+          </Text>
 
           {/* Quick Preset */}
           <TouchableOpacity
@@ -290,7 +319,7 @@ export default function BusinessStep2Screen() {
             onPress={handleNext}
             className="flex-1 bg-primary-500 py-4 rounded-xl items-center"
           >
-            <Text className="text-white font-bold">Next: Photos</Text>
+            <Text className="text-white font-bold">Next: Area of Service</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -1,6 +1,6 @@
-// File: app/(business)/register/step4.tsx
+﻿// File: app/(business)/register/step4.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,296 +9,432 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  useColorScheme,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
-  ArrowLeftIcon,
+  BuildingStorefrontIcon,
+  MapPinIcon,
   RectangleGroupIcon,
+  ClockIcon,
+  TruckIcon,
   XMarkIcon,
+  CameraIcon,
+  PencilSquareIcon,
 } from 'react-native-heroicons/outline';
-import { CheckCircleIcon } from 'react-native-heroicons/solid';
+import { CheckCircleIcon as CheckCircleSolid } from 'react-native-heroicons/solid';
 import { useDispatch, useSelector } from 'react-redux';
-import { setGroupIds } from '@/src/store/slices/businessRegistrationSlice';
 import { RootState } from '@/src/store';
-import { getActiveGroups } from '@/src/utils/business';
+import {
+  registerBusiness,
+  presignUpload,
+  uploadToS3,
+} from '@/src/utils/business';
+import {
+  resetBusinessRegistration,
+  DayHoursState,
+} from '@/src/store/slices/businessRegistrationSlice';
 
-interface Group {
-  id: string;
-  name: string;
-  description: string;
-  icon_url: string;
-  sort_order: number;
-  status: string;
-  created_at: string;
-  updated_at: string;
+const TOTAL_STEPS = 4;
+const CURRENT_STEP = 4;
+const STEP_LABELS = ['Business Info', 'Hours', 'Service Area', 'Review'];
+
+const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const DAY_LABELS: Record<string, string> = {
+  mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu',
+  fri: 'Fri', sat: 'Sat', sun: 'Sun',
+};
+const DAY_FULL_NAMES: Record<string, string> = {
+  mon: 'monday', tue: 'tuesday', wed: 'wednesday', thu: 'thursday',
+  fri: 'friday', sat: 'saturday', sun: 'sunday',
+};
+const DELIVERY_LABELS: Record<string, string> = {
+  onsite: 'On-site',
+  remote: 'Remote',
+  both: 'Both (On-site & Remote)',
+};
+
+function buildHoursPayload(
+  hours: Record<string, DayHoursState>,
+): Record<string, { open: string | null; close: string | null; is_open: boolean }> {
+  const payload: Record<string, { open: string | null; close: string | null; is_open: boolean }> = {};
+  DAYS.forEach((day) => {
+    const d = hours[day];
+    const fullName = DAY_FULL_NAMES[day];
+    if (!d || !fullName) return;
+    if (d.mode === 'closed') {
+      payload[fullName] = { open: null, close: null, is_open: false };
+    } else if (d.mode === 'working') {
+      payload[fullName] = { open: d.open, close: d.close, is_open: true };
+    } else if (d.mode === 'fullday') {
+      payload[fullName] = { open: '00:00', close: '23:59', is_open: true };
+    }
+  });
+  return payload;
 }
-
-const MAX_GROUPS = 3;
 
 export default function BusinessStep4Screen() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const reg = useSelector((state: RootState) => state.businessRegistration);
 
-  const [selectedIds, setSelectedIds] = useState<string[]>(reg.group_ids);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  useEffect(() => {
-    fetchGroups();
-  }, []);
+  const handleClose = () => {
+    Alert.alert(
+      'Cancel Registration',
+      'Your registration progress will be lost. Are you sure you want to exit?',
+      [
+        { text: 'Stay', style: 'cancel' },
+        { text: 'Exit', style: 'destructive', onPress: () => router.replace('/(tabs)') },
+      ],
+    );
+  };
 
-  const fetchGroups = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getActiveGroups();
-      setGroups(response.data || response);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load groups');
-    } finally {
-      setLoading(false);
+  const navigateToStep = (step: number) => {
+    if (step < CURRENT_STEP) {
+      router.push(`/(business)/register/step${step}` as any);
     }
   };
 
-  const toggleGroup = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((s) => s !== id));
-    } else {
-      if (selectedIds.length >= MAX_GROUPS) {
-        Alert.alert('Maximum reached', `You can select up to ${MAX_GROUPS} business groups.`);
-        return;
-      }
-      setSelectedIds([...selectedIds, id]);
-    }
+  const handleEdit = (step: number) => {
+    router.push(`/(business)/register/step${step}` as any);
   };
 
-  const removeGroup = (id: string) => {
-    setSelectedIds(selectedIds.filter((s) => s !== id));
+  const formatHoursSummary = () => {
+    const h = reg.business_hours;
+    if (!h || Object.keys(h).length === 0) return 'Not configured';
+    const working = DAYS.filter((d) => h[d]?.mode === 'working').length;
+    const fullday = DAYS.filter((d) => h[d]?.mode === 'fullday').length;
+    const closed = DAYS.filter((d) => h[d]?.mode === 'closed').length;
+    const parts: string[] = [];
+    if (working > 0) parts.push(`${working} working`);
+    if (fullday > 0) parts.push(`${fullday} 24/7`);
+    if (closed > 0) parts.push(`${closed} closed`);
+    return parts.join(' · ') || 'Not configured';
   };
 
-  const getSelectedGroupObjects = () => groups.filter((g) => selectedIds.includes(g.id));
-
-  const handleNext = () => {
-    if (selectedIds.length === 0) {
-      Alert.alert('Required', 'Please select at least one business group');
+  const handleSubmit = async () => {
+    if (!agreedToTerms) {
+      Alert.alert('Agreement Required', 'Please agree to the terms and conditions');
       return;
     }
-    dispatch(setGroupIds(selectedIds));
-    router.push('/(business)/register/step5');
+    if (!reg.business_name || !reg.business_description) {
+      Alert.alert('Error', 'Business name and description are required');
+      return;
+    }
+    if (!reg.latitude || !reg.longitude) {
+      Alert.alert('Error', 'Business location is required');
+      return;
+    }
+    if (!reg.group_id) {
+      Alert.alert('Error', 'Please select an area of service');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      let logoUrl: string | undefined;
+
+      // Upload logo to S3 if a local URI is stored
+      if (reg.business_logo && !reg.business_logo.startsWith('http')) {
+        setSubmitStatus('Uploading business logo...');
+        const uri = reg.business_logo;
+        const ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
+        const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+        const fileName = `logo_${Date.now()}.${ext}`;
+
+        const presignResponse = await presignUpload({
+          file_name: fileName,
+          content_type: contentType,
+          upload_type: 'business_logo',
+          reference_id: reg.business_name.toLowerCase().replace(/\s+/g, '-'),
+        });
+
+        await uploadToS3(presignResponse.data.upload_url, uri, contentType);
+        logoUrl = presignResponse.data.public_url;
+      } else if (reg.business_logo?.startsWith('http')) {
+        logoUrl = reg.business_logo;
+      }
+
+      setSubmitStatus('Registering your business...');
+      const payload = {
+        business_name: reg.business_name,
+        business_description: reg.business_description,
+        service_delivery_type: reg.service_delivery_type,
+        longitude: reg.longitude!,
+        latitude: reg.latitude!,
+        address: reg.address,
+        city: reg.city,
+        state_region: reg.state_region,
+        country: reg.country,
+        business_hours: buildHoursPayload(reg.business_hours),
+        group_id: reg.group_id,
+        ...(logoUrl && { logo_url: logoUrl }),
+      };
+
+      await registerBusiness(payload);
+      dispatch(resetBusinessRegistration());
+
+      Alert.alert(
+        'Business Registered!',
+        "Your business has been submitted for review. You'll be notified once approved.",
+        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }],
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to register business. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+      setSubmitStatus('');
+    }
   };
+
+  const sectionCard = (children: React.ReactNode) => (
+    <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]">
+      {children}
+    </View>
+  );
+
+  const sectionHeader = (icon: React.ReactNode, title: string, editStep: number) => (
+    <View className="flex-row items-center justify-between mb-3">
+      <View className="flex-row items-center">
+        {icon}
+        <Text className="text-sm font-bold text-gray-900 dark:text-white ml-2">{title}</Text>
+      </View>
+      <TouchableOpacity
+        onPress={() => handleEdit(editStep)}
+        className="flex-row items-center px-2.5 py-1 bg-gray-100 dark:bg-[#0F172A] rounded-lg"
+      >
+        <PencilSquareIcon size={13} color="#F97316" />
+        <Text className="text-xs text-orange-500 font-semibold ml-1">Edit</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-[#0F172A]">
       <StatusBar style="auto" />
 
-      {/* Header */}
-      <View className="px-6 pt-4 pb-4 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
-        <View className="flex-row items-center mb-4">
-          <TouchableOpacity onPress={() => router.back()} className="mr-4">
-            <ArrowLeftIcon size={24} color="#6B7280" />
-          </TouchableOpacity>
-          <View className="flex-1">
-            <Text className="text-xl font-bold text-gray-900 dark:text-white">
+      {/* Fixed Header */}
+      <View className="px-5 pt-3 pb-3 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
+        <View className="flex-row items-center justify-between mb-3">
+          <View>
+            <Text className="text-base font-bold text-gray-900 dark:text-white">
               Register Business
             </Text>
-            <Text className="text-sm text-gray-600 dark:text-gray-400">
-              Step 4 of 5
+            <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Step {CURRENT_STEP} of {TOTAL_STEPS} — {STEP_LABELS[CURRENT_STEP - 1]}
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={handleClose}
+            className="w-8 h-8 bg-gray-100 dark:bg-[#334155] rounded-full items-center justify-center"
+          >
+            <XMarkIcon size={16} color="#6B7280" />
+          </TouchableOpacity>
         </View>
-        <View className="h-2 bg-gray-200 dark:bg-[#334155] rounded-full overflow-hidden">
-          <View className="h-full w-[80%] bg-primary-500 rounded-full" />
+        <View className="flex-row" style={{ gap: 5 }}>
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <TouchableOpacity
+              key={i}
+              onPress={() => navigateToStep(i + 1)}
+              disabled={i + 1 >= CURRENT_STEP}
+              style={{
+                flex: 1,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: i + 1 <= CURRENT_STEP ? '#F97316' : isDark ? '#334155' : '#E5E7EB',
+              }}
+            />
+          ))}
         </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        <View className="px-6 py-6">
-          {/* Step Icon */}
-          <View className="items-center mb-6">
-            <LinearGradient
-              colors={['#F57C1F', '#E06A0F']}
-              className="w-20 h-20 rounded-full items-center justify-center mb-4"
-            >
-              <RectangleGroupIcon size={40} color="#FFFFFF" />
-            </LinearGradient>
-            <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Business Groups
-            </Text>
-            <Text className="text-sm text-center text-gray-600 dark:text-gray-400 px-8">
-              Select 1�{MAX_GROUPS} groups that best describe your business
-            </Text>
-          </View>
+        <View className="px-5 py-6">
 
-          {/* Loading */}
-          {loading && (
-            <View className="py-12 items-center">
-              <ActivityIndicator size="large" color="#F57C1F" />
-              <Text className="text-gray-600 dark:text-gray-400 mt-4">Loading groups...</Text>
-            </View>
-          )}
+          <Text className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+            Review & Submit
+          </Text>
+          <Text className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Please review your information before submitting
+          </Text>
 
-          {/* Error */}
-          {error && !loading && (
-            <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800 mb-6">
-              <Text className="text-red-700 dark:text-red-400 text-center mb-3">{error}</Text>
-              <TouchableOpacity onPress={fetchGroups} className="bg-red-600 py-2 px-4 rounded-lg">
-                <Text className="text-white text-center font-semibold">Retry</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Selected Groups Chips */}
-          {!loading && selectedIds.length > 0 && (
-            <View className="mb-5">
-              <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Selected ({selectedIds.length}/{MAX_GROUPS})
-              </Text>
-              <View className="flex-row flex-wrap -mx-1">
-                {getSelectedGroupObjects().map((g) => (
-                  <View key={g.id} className="px-1 mb-2">
-                    <View className="bg-primary-500 rounded-full px-4 py-2 flex-row items-center">
-                      <Text className="text-white font-semibold text-sm mr-2" numberOfLines={1}>
-                        {g.name}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => removeGroup(g.id)}
-                        className="bg-white/20 rounded-full p-0.5"
-                      >
-                        <XMarkIcon size={16} color="#FFFFFF" strokeWidth={2.5} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
+          {/* Business Info card */}
+          {sectionCard(
+            <>
+              {sectionHeader(<BuildingStorefrontIcon size={18} color="#0891B2" />, 'Business Info', 1)}
+              {/* Logo */}
+              {reg.business_logo ? (
+                <View className="flex-row items-center mb-3">
+                  <Image
+                    source={{ uri: reg.business_logo }}
+                    style={{ width: 52, height: 52, borderRadius: 12 }}
+                    resizeMode="cover"
+                  />
+                  <Text className="text-xs text-gray-400 ml-2">Business logo</Text>
+                </View>
+              ) : null}
+              <View style={{ gap: 8 }}>
+                <View>
+                  <Text className="text-xs text-gray-400 mb-0.5">Business Name</Text>
+                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {reg.business_name}
+                  </Text>
+                </View>
+                <View>
+                  <Text className="text-xs text-gray-400 mb-0.5">Description</Text>
+                  <Text className="text-sm text-gray-700 dark:text-gray-300" numberOfLines={3}>
+                    {reg.business_description}
+                  </Text>
+                </View>
               </View>
-            </View>
+            </>
           )}
 
-          {/* Groups List */}
-          {!loading && !error && groups.length > 0 && (
-            <View className="space-y-3">
-              <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Available Groups
+          {/* Service Delivery */}
+          {sectionCard(
+            <>
+              {sectionHeader(<TruckIcon size={18} color="#F97316" />, 'Service Delivery', 1)}
+              <Text className="text-sm font-medium text-gray-900 dark:text-white">
+                {DELIVERY_LABELS[reg.service_delivery_type] || reg.service_delivery_type}
               </Text>
-              {groups.map((group) => {
-                const isSelected = selectedIds.includes(group.id);
-                const isDisabled = !isSelected && selectedIds.length >= MAX_GROUPS;
-                return (
-                  <TouchableOpacity
-                    key={group.id}
-                    onPress={() => toggleGroup(group.id)}
-                    disabled={isDisabled}
-                    className={`rounded-2xl border-2 p-4 ${
-                      isSelected
-                        ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500'
-                        : isDisabled
-                        ? 'bg-gray-50 dark:bg-[#1E293B] border-gray-200 dark:border-[#334155] opacity-50'
-                        : 'bg-white dark:bg-[#1E293B] border-gray-200 dark:border-[#334155]'
-                    }`}
-                  >
-                    <View className="flex-row items-center">
-                      {/* Group Icon */}
-                      <View className="mr-3">
-                        {group.icon_url && !imageErrors[group.id] ? (
-                          <Image
-                            source={{ uri: group.icon_url }}
-                            className="w-12 h-12 rounded-xl"
-                            resizeMode="contain"
-                            onError={() =>
-                              setImageErrors((p) => ({ ...p, [group.id]: true }))
-                            }
-                          />
-                        ) : (
-                          <View className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-[#334155] items-center justify-center">
-                            <RectangleGroupIcon size={24} color="#9CA3AF" />
-                          </View>
-                        )}
-                      </View>
+            </>
+          )}
 
-                      {/* Group Info */}
-                      <View className="flex-1 mr-3">
-                        <Text
-                          className={`text-sm font-bold mb-0.5 ${
-                            isSelected
-                              ? 'text-primary-700 dark:text-primary-400'
-                              : 'text-gray-900 dark:text-white'
-                          }`}
-                        >
-                          {group.name}
-                        </Text>
-                        <Text
-                          numberOfLines={2}
-                          ellipsizeMode="tail"
-                          className={`text-xs leading-tight ${
-                            isSelected
-                              ? 'text-primary-600 dark:text-primary-300'
-                              : 'text-gray-500 dark:text-gray-400'
-                          }`}
-                        >
-                          {group.description}
-                        </Text>
-                      </View>
+          {/* Location */}
+          {sectionCard(
+            <>
+              {sectionHeader(<MapPinIcon size={18} color="#0891B2" />, 'Location', 1)}
+              <View style={{ gap: 3 }}>
+                <Text className="text-sm font-medium text-gray-900 dark:text-white">
+                  {reg.address}
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">
+                  {reg.city}, {reg.state_region}
+                </Text>
+                <Text className="text-xs text-gray-400">{reg.country}</Text>
+                {reg.latitude && reg.longitude && (
+                  <Text className="text-xs text-gray-400">
+                    {reg.latitude.toFixed(5)}, {reg.longitude.toFixed(5)}
+                  </Text>
+                )}
+              </View>
+            </>
+          )}
 
-                      {/* Check */}
-                      {isSelected ? (
-                        <CheckCircleIcon size={26} color="#F57C1F" />
-                      ) : (
-                        <View className="w-6 h-6 border-2 border-gray-300 dark:border-[#475569] rounded-full" />
+          {/* Business Hours */}
+          {sectionCard(
+            <>
+              {sectionHeader(<ClockIcon size={18} color="#8B5CF6" />, 'Business Hours', 2)}
+              <Text className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {formatHoursSummary()}
+              </Text>
+              <View style={{ gap: 4 }}>
+                {DAYS.map((day) => {
+                  const d = reg.business_hours[day];
+                  if (!d) return null;
+                  return (
+                    <View key={day} className="flex-row items-center">
+                      <Text className="text-xs font-semibold text-gray-400 w-9">
+                        {DAY_LABELS[day]}
+                      </Text>
+                      {d.mode === 'working' && (
+                        <Text className="text-xs text-gray-800 dark:text-gray-200 ml-2">
+                          {d.open} – {d.close}
+                        </Text>
+                      )}
+                      {d.mode === 'closed' && (
+                        <Text className="text-xs text-red-500 ml-2">Closed</Text>
+                      )}
+                      {d.mode === 'fullday' && (
+                        <Text className="text-xs text-green-600 dark:text-green-400 ml-2">24 / 7</Text>
                       )}
                     </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
+            </>
           )}
 
-          {/* Empty State */}
-          {!loading && !error && groups.length === 0 && (
-            <View className="py-12 items-center">
-              <RectangleGroupIcon size={64} color="#9CA3AF" />
-              <Text className="text-gray-600 dark:text-gray-400 mt-4 text-center">
-                No groups available at the moment
+          {/* Area of Service */}
+          {sectionCard(
+            <>
+              {sectionHeader(<RectangleGroupIcon size={18} color="#10B981" />, 'Area of Service', 3)}
+              <Text className="text-sm text-gray-600 dark:text-gray-400">
+                {reg.group_id ? reg.group_id : 'None selected'}
               </Text>
-            </View>
+            </>
           )}
 
-          {/* Tip */}
-          {!loading && groups.length > 0 && (
-            <View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800 mt-6">
-              <Text className="text-blue-700 dark:text-blue-400 text-sm font-semibold mb-1">
-                ?? Tip
-              </Text>
-              <Text className="text-blue-600 dark:text-blue-300 text-xs">
-                Choose up to {MAX_GROUPS} groups that best match your business. This helps clients find you in the right categories.
+          {/* Terms */}
+          <TouchableOpacity
+            onPress={() => setAgreedToTerms(!agreedToTerms)}
+            className="flex-row items-start bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]"
+          >
+            <View className="mr-3 mt-0.5">
+              {agreedToTerms ? (
+                <CheckCircleSolid size={22} color="#F97316" />
+              ) : (
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    borderWidth: 2,
+                    borderColor: isDark ? '#475569' : '#D1D5DB',
+                  }}
+                />
+              )}
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm text-gray-700 dark:text-gray-300 leading-5">
+                I confirm that the information provided is accurate
               </Text>
             </View>
-          )}
+          </TouchableOpacity>
+
+          {/* Info note */}
+          <View className="bg-sky-50 dark:bg-sky-900/20 p-4 rounded-xl border border-sky-200 dark:border-sky-800">
+            <Text className="text-sky-700 dark:text-sky-400 text-xs leading-5">
+              After submission your business will be reviewed. You'll receive a notification
+              once approved, typically within 24–48 hours.
+            </Text>
+          </View>
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation */}
-      <View className="px-6 py-4 bg-white dark:bg-[#1E293B] border-t border-gray-200 dark:border-[#334155]">
-        <View className="flex-row space-x-3">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="flex-1 bg-gray-100 dark:bg-[#0F172A] border border-gray-300 dark:border-[#334155] py-4 rounded-xl items-center"
-          >
-            <Text className="text-gray-700 dark:text-gray-300 font-bold">Back</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleNext}
-            disabled={selectedIds.length === 0}
-            style={{ opacity: selectedIds.length === 0 ? 0.5 : 1 }}
-            className="flex-1 bg-primary-500 py-4 rounded-xl items-center"
-          >
-            <Text className="text-white font-bold">Next: Review</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Fixed Bottom Navigation */}
+      <View className="px-5 py-4 bg-white dark:bg-[#1E293B] border-t border-gray-200 dark:border-[#334155]">
+        {isSubmitting ? (
+          <View className="items-center py-3">
+            <ActivityIndicator size="large" color="#F97316" />
+            <Text className="text-gray-500 dark:text-gray-400 mt-2 text-sm">{submitStatus}</Text>
+          </View>
+        ) : (
+          <View className="flex-row" style={{ gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="flex-1 bg-gray-100 dark:bg-[#0F172A] border border-gray-200 dark:border-[#334155] py-4 rounded-xl items-center"
+            >
+              <Text className="text-gray-700 dark:text-gray-300 font-bold">Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={!agreedToTerms}
+              style={{ opacity: agreedToTerms ? 1 : 0.45 }}
+              className="flex-1 bg-orange-500 py-4 rounded-xl items-center"
+            >
+              <Text className="text-white font-bold">Submit Business</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );

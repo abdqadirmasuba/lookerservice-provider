@@ -1,5 +1,48 @@
 import { apiRequests } from './apiRequest';
 
+export const presignUpload = async (params: {
+  file_name: string;
+  content_type: string;
+  upload_type: string;
+  reference_id?: string;
+  name?: string;
+}) => {
+  try {
+    const response = await apiRequests.post('/provider/uploads/presign', params);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Upload a local file to an S3 pre-signed URL as raw binary.
+ * Uses XMLHttpRequest so React Native can read the local file URI directly.
+ * No auth headers — S3 presigned URLs are self-contained.
+ */
+export const uploadToS3 = (
+  uploadUrl: string,
+  fileUri: string,
+  contentType: string,
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== 4) return;
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`S3 upload failed with status ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('S3 upload network error'));
+    // React Native resolves local file URIs when passed as { uri } to XHR body
+    xhr.send({ uri: fileUri, type: contentType, name: 'upload' } as any);
+  });
+};
+
 export const registerBusiness = async (data: {
   business_name: string;
   business_description: string;
@@ -12,7 +55,8 @@ export const registerBusiness = async (data: {
   country: string;
   business_hours?: object;
   business_photos?: string[];
-  group_ids: string[];
+  group_id: string;
+  logo_url?: string;
 }) => {
   try {
     const response = await apiRequests.post('/provider/register', data);

@@ -148,12 +148,21 @@ export default function VerifyPhoneScreen() {
               <PhoneIcon size={40} color="#F57C1F" />
             </View>
             <Text className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Enter Verification Code
+              Verify Phone Number
             </Text>
-            <Text className={`text-center text-sm px-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              We sent a 6-digit code to
-            </Text>
-            <Text className="text-primary-500 font-bold mt-1">{address}</Text>
+            <View className={`flex-row items-start rounded-xl px-4 py-3 mt-1 mb-2 ${
+              isDark ? 'bg-blue-900/20 border border-blue-800' : 'bg-blue-50 border border-blue-200'
+            }`}>
+              <Text style={{ fontSize: 18 }}>📱</Text>
+              <View className="flex-1 ml-2">
+                <Text className={`text-sm font-medium ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                  A verification code has been sent to your phone via SMS.
+                </Text>
+                <Text className={`text-xs mt-0.5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                  Sent to: {address}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -189,11 +198,13 @@ export default function VerifyPhoneScreen() {
                 selectTextOnFocus
                 className={`w-14 h-16 rounded-xl text-center text-2xl font-bold ${
                   digit
-                    ? 'bg-primary-50 border-2 border-primary-500'
+                    ? isDark
+                      ? 'bg-blue-900/30 border-2 border-blue-500 text-white'
+                      : 'bg-blue-50 border-2 border-blue-600 text-gray-900'
                     : isDark
-                    ? 'bg-dark-card border border-dark-border'
-                    : 'bg-gray-100 border border-gray-300'
-                } ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    ? 'bg-dark-card border border-dark-border text-white'
+                    : 'bg-gray-100 border border-gray-300 text-gray-900'
+                }`}
               />
             ))}
           </View>
@@ -235,11 +246,12 @@ export default function VerifyPhoneScreen() {
             >
               <ArrowPathIcon
                 size={16}
-                color={canResend ? '#F57C1F' : colors.textSecondary}
+                color={canResend ? '#2563EB' : colors.textSecondary}
               />
               <Text
+                style={{ color: canResend ? '#2563EB' : undefined }}
                 className={`ml-2 font-bold ${
-                  canResend ? 'text-primary-500' : isDark ? 'text-gray-600' : 'text-gray-400'
+                  canResend ? '' : isDark ? 'text-gray-600' : 'text-gray-400'
                 }`}
               >
                 {canResend ? 'Resend Code' : `Resend in ${resendTimer}s`}
@@ -252,7 +264,7 @@ export default function VerifyPhoneScreen() {
             onPress={() => router.back()}
             className="items-center mt-8"
           >
-            <Text className="text-primary-500 font-bold">Change Phone Number</Text>
+            <Text style={{ color: '#0891B2' }} className="font-bold">Change Phone Number</Text>
           </TouchableOpacity>
         </View>
       </View>

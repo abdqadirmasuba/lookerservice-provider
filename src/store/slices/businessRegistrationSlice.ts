@@ -25,11 +25,14 @@ export interface BusinessRegistrationState {
   // Step 2: Business Hours (per-day mode + times)
   business_hours: { [day: string]: DayHoursState };
 
+  // Step 1: Business Logo (local URI before upload, public URL after)
+  business_logo: string;
+
   // Step 3: Business Photos (server URLs)
   business_photos: string[];
 
-  // Step 4: Groups (1–3 selections)
-  group_ids: string[];
+  // Step 3 (new): Groups — single selection
+  group_id: string;
 
   // Current step
   currentStep: number;
@@ -45,9 +48,10 @@ const initialState: BusinessRegistrationState = {
   city: '',
   state_region: '',
   country: '',
+  business_logo: '',
   business_hours: {},
   business_photos: [],
-  group_ids: [],
+  group_id: '',
   currentStep: 1,
 };
 
@@ -94,6 +98,10 @@ const businessRegistrationSlice = createSlice({
       state.business_hours = action.payload;
     },
 
+    setBusinessLogo: (state, action: PayloadAction<string>) => {
+      state.business_logo = action.payload;
+    },
+
     setBusinessPhotos: (state, action: PayloadAction<string[]>) => {
       state.business_photos = action.payload;
     },
@@ -106,8 +114,8 @@ const businessRegistrationSlice = createSlice({
       state.business_photos.splice(action.payload, 1);
     },
 
-    setGroupIds: (state, action: PayloadAction<string[]>) => {
-      state.group_ids = action.payload;
+    setGroupIds: (state, action: PayloadAction<string>) => {
+      state.group_id = action.payload;
     },
 
     setCurrentStep: (state, action: PayloadAction<number>) => {
@@ -133,6 +141,7 @@ const businessRegistrationSlice = createSlice({
 export const {
   setBusinessInfo,
   setLocation,
+  setBusinessLogo,
   setBusinessHours,
   setBusinessPhotos,
   addBusinessPhoto,

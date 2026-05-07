@@ -4,8 +4,11 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/src/store';
+import { logout } from '@/src/store/slices/authSlice';
+import { callLogoutApi } from '@/src/utils/apiRequest';
+import { removeRefreshToken } from '@/src/utils/refreshTokenStorage';
 import {
   UserCircleIcon,
   BuildingStorefrontIcon,
@@ -25,11 +28,14 @@ import {
 
 export default function AccountScreen() {
   const router = useRouter();
+  const dispatch = useDispatch();
 
   // Get user data from Redux
   const userData = useSelector((state: RootState) => state.user.user);
   const providerBusinesses = useSelector((state: RootState) => state.auth.providerBusinesses);
-  const hasMultipleBusinesses = providerBusinesses && providerBusinesses.length > 1;
+  const activeBusinessId = useSelector((state: RootState) => state.auth.activeBusinessId);
+  const providerTier = useSelector((state: RootState) => state.auth.providerTier);
+  const hasMultipleBusinesses = providerTier === 'pro' && providerBusinesses && providerBusinesses.length > 1;
 
   const handleLogout = () => {
     Alert.alert(
@@ -40,7 +46,10 @@ export default function AccountScreen() {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            await callLogoutApi();
+            await removeRefreshToken();
+            dispatch(logout());
             router.replace('/(auth)/login');
           },
         },
@@ -121,7 +130,7 @@ export default function AccountScreen() {
             Business
           </Text>
           <View className="bg-white dark:bg-[#1E293B] rounded-2xl mb-6 shadow-sm overflow-hidden">
-            {/* Switch Business - Show only if multiple businesses */}
+            {/* Switch Business - Pro tier only, when multiple businesses exist */}
             {hasMultipleBusinesses && (
               <>
                 <MenuItem
@@ -135,9 +144,13 @@ export default function AccountScreen() {
             )}
             <MenuItem
               icon={<BuildingStorefrontIcon size={24} color="#F57C1F" />}
-              title="My Businesses"
-              subtitle="Manage your registered businesses"
-              onPress={() => router.push('/(business)/list')}
+              title={providerTier === 'pro' ? 'My Businesses' : 'Manage Business'}
+              subtitle={providerTier === 'pro' ? 'Manage your registered businesses' : 'View and edit your business'}
+              onPress={() =>
+                providerTier === 'pro'
+                  ? router.push('/(business)/list')
+                  : router.push(`/(business)/${activeBusinessId}/profile`)
+              }
             />
             <Divider />
             <MenuItem

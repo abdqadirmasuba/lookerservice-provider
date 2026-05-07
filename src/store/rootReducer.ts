@@ -4,6 +4,7 @@ import userReducer from './slices/userSlice';
 import themeReducer from './slices/themeSlice';
 import businessRegistrationReducer from './slices/businessRegistrationSlice';
 import notificationReducer from './slices/notificationSlice';
+import networkReducer from './slices/networkSlice';
 // import businessReducer from './slices/businessSlice';
 // import bookingReducer from './slices/bookingSlice';
 // import bidReducer from './slices/bidSlice';
@@ -16,6 +17,7 @@ const rootReducer = combineReducers({
   theme: themeReducer,
   businessRegistration: businessRegistrationReducer,
   notifications: notificationReducer,
+  network: networkReducer,
 //   business: businessReducer,
 //   booking: bookingReducer,
 //   bid: bidReducer,

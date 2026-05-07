@@ -28,6 +28,7 @@ import {
 import KeyboardAvoidingWrapper from '@/src/components/common/KeyboardAvoidingWrapper';
 import {apiRequests} from '@/src/utils/apiRequest';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { detectCountry, validateInternationalPhone } from '@/src/utils/countryCodeUtils';
 
 function SplashLogo() {
   return (
@@ -51,7 +52,7 @@ export default function LoginScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('email');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -74,8 +75,9 @@ export default function LoginScreen() {
       }
     }
     if (activeTab === 'phone') {
-      if (!phone.trim()) {
-        setErrorMessage('Please enter your phone number');
+      const phoneErr = validateInternationalPhone(phone.trim());
+      if (phoneErr) {
+        setErrorMessage(phoneErr);
         return;
       }
       if (!password) {
@@ -101,6 +103,7 @@ export default function LoginScreen() {
           token: res.data.access_token,
           refreshToken: res.data.refresh_token,
           providerBusinesses: res.data.provider_businesses || [],
+          providerTier: res.data.user.provider_tier === 'pro' ? 'pro' : 'free',
         }));
         registerDeviceToken(res.data.access_token); // fire-and-forget
         dispatch(setUser({
@@ -236,18 +239,32 @@ export default function LoginScreen() {
                     Phone Number
                   </Text>
                   <View className="flex-row items-center bg-gray-50 dark:bg-[#0F172A] border border-gray-200 dark:border-[#334155] rounded-xl px-4">
-                    <PhoneIcon size={20} color="#6B7280" />
-                    <Text className="ml-3 text-gray-600 dark:text-gray-400">+256</Text>
+                    <Text style={{ fontSize: 22 }}>
+                      {detectCountry(phone)?.flag ?? '🌍'}
+                    </Text>
                     <TextInput
-                      placeholder="701 234 567"
+                      placeholder="+256 701 234 567"
                       placeholderTextColor="#6B7280"
                       value={phone}
-                      onChangeText={setPhone}
+                      onChangeText={(t) => {
+                        // Always keep leading '+'
+                        if (!t.startsWith('+')) setPhone('+' + t.replace(/[^0-9]/g, ''));
+                        else setPhone('+' + t.slice(1).replace(/[^0-9]/g, ''));
+                      }}
                       keyboardType="phone-pad"
                       returnKeyType="next"
-                      className="flex-1 py-4 ml-2 text-gray-900 dark:text-white"
+                      autoCorrect={false}
+                      className="flex-1 py-4 ml-3 text-gray-900 dark:text-white"
                     />
                   </View>
+                  {phone.length > 1 && (() => {
+                    const country = detectCountry(phone);
+                    return country ? (
+                      <Text className="text-xs text-green-600 mt-1 ml-1">{country.flag} {country.name} (+{country.code})</Text>
+                    ) : (
+                      <Text className="text-xs text-amber-600 mt-1 ml-1">Keep typing the country code…</Text>
+                    );
+                  })()}
                 </View>
               </View>
             )}
@@ -284,7 +301,7 @@ export default function LoginScreen() {
               onPress={() => router.push('/(auth)/forgot-password')}
               className="items-end mb-6"
             >
-              <Text className="text-primary-500 font-medium">Forgot Password?</Text>
+              <Text style={{ color: '#2563EB' }} className="font-medium">Forgot Password?</Text>
             </TouchableOpacity>
 
             {/* Login Button */}
@@ -308,7 +325,7 @@ export default function LoginScreen() {
               New provider?{' '}
             </Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-              <Text className="text-primary-500 font-bold">Register</Text>
+              <Text style={{ color: '#2DA9E9' }} className="font-bold">Register</Text>
             </TouchableOpacity>
           </View>
         </View>

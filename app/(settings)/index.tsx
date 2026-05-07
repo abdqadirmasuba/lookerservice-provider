@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useDispatch } from 'react-redux';
+import { logout } from '@/src/store/slices/authSlice';
+import { callLogoutApi } from '@/src/utils/apiRequest';
+import { removeRefreshToken } from '@/src/utils/refreshTokenStorage';
 import {
   ArrowLeftIcon,
   ChevronRightIcon,
@@ -28,6 +32,27 @@ interface SettingItem {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const dispatch = useDispatch();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await callLogoutApi();
+            await removeRefreshToken();
+            dispatch(logout());
+            router.replace('/(auth)/login');
+          },
+        },
+      ]
+    );
+  };
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [biometric, setBiometric] = useState(false);
@@ -163,7 +188,9 @@ export default function SettingsScreen() {
                   key={item.id}
                   onPress={() => {
                     if (item.type === 'toggle') return;
-                    if (item.id === 'notifications') {
+                    if (item.id === 'logout') {
+                      handleLogout();
+                    } else if (item.id === 'notifications') {
                       router.push('/(settings)/notifications');
                     } else {
                       handleToggle(item.id);

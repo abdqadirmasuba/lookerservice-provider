@@ -31,6 +31,8 @@ import { setTempToken } from '@/src/store/slices/authSlice';
 import { apiRequests } from '@/src/utils/apiRequest';
 import KeyboardAvoidingWrapper from '@/src/components/common/KeyboardAvoidingWrapper';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { Linking } from 'react-native';
+import { detectCountry, validateInternationalPhone } from '@/src/utils/countryCodeUtils';
 
 function SplashLogo() {
   return (
@@ -58,7 +60,7 @@ export default function RegisterScreen() {
   // Form states
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -110,9 +112,12 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (activeTab === 'phone' && !phone.trim()) {
-      setErrorMessage('Please enter your phone number');
-      return;
+    if (activeTab === 'phone') {
+      const phoneErr = validateInternationalPhone(phone.trim());
+      if (phoneErr) {
+        setErrorMessage(phoneErr);
+        return;
+      }
     }
 
     if (!password) {
@@ -146,7 +151,7 @@ export default function RegisterScreen() {
       if (activeTab === 'email') {
         payload.email = email.trim();
       } else {
-        payload.phone = `+256${phone.trim()}`;
+        payload.phone = phone.trim();
       }
 
       const response = await apiRequests.post('/auth/register', payload);
@@ -300,17 +305,30 @@ export default function RegisterScreen() {
                     Phone Number
                   </Text>
                   <View className={`flex-row items-center ${isDark ? 'bg-dark-bg border-dark-border' : 'bg-gray-50 border-gray-200'} border rounded-xl px-4`}>
-                    <PhoneIcon size={20} color={colors.textSecondary} />
-                    <Text className={`ml-3 ${isDark ? 'text-gray-400' : 'text-gray-600'} font-medium`}>+256</Text>
+                    <Text style={{ fontSize: 22 }}>
+                      {detectCountry(phone)?.flag ?? '🌍'}
+                    </Text>
                     <TextInput
-                      placeholder="701 234 567"
+                      placeholder="+256 701 234 567"
                       placeholderTextColor={colors.textSecondary}
                       value={phone}
-                      onChangeText={setPhone}
+                      onChangeText={(t) => {
+                        if (!t.startsWith('+')) setPhone('+' + t.replace(/[^0-9]/g, ''));
+                        else setPhone('+' + t.slice(1).replace(/[^0-9]/g, ''));
+                      }}
                       keyboardType="phone-pad"
-                      className={`flex-1 py-4 ml-2 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                      autoCorrect={false}
+                      className={`flex-1 py-4 ml-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
                     />
                   </View>
+                  {phone.length > 1 && (() => {
+                    const country = detectCountry(phone);
+                    return country ? (
+                      <Text className="text-xs text-green-600 mt-1 ml-1">{country.flag} {country.name} (+{country.code})</Text>
+                    ) : (
+                      <Text className="text-xs text-amber-600 mt-1 ml-1">Keep typing the country code…</Text>
+                    );
+                  })()}
                 </View>
               )}
 
@@ -446,9 +464,21 @@ export default function RegisterScreen() {
                 </View>
                 <Text className={`flex-1 text-sm leading-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   I agree to the{' '}
-                  <Text className="text-primary-500 font-semibold">Terms & Conditions</Text>
+                  <Text
+                    style={{ color: '#2563EB' }}
+                    className="font-semibold"
+                    onPress={() => Linking.openURL('https://lookerservice.com/terms-of-service/provider')}
+                  >
+                    Terms of Service
+                  </Text>
                   {' '}and{' '}
-                  <Text className="text-primary-500 font-semibold">Privacy Policy</Text>
+                  <Text
+                    style={{ color: '#0891B2' }}
+                    className="font-semibold"
+                    onPress={() => Linking.openURL('https://lookerservice.com/privacy-policy/provider')}
+                  >
+                    Privacy Policy
+                  </Text>
                 </Text>
               </TouchableOpacity>
 
@@ -481,7 +511,7 @@ export default function RegisterScreen() {
                 Already have an account?{' '}
               </Text>
               <TouchableOpacity onPress={() => router.back()}>
-                <Text className="text-primary-500 font-bold text-sm">Login</Text>
+                <Text style={{ color: '#2DA9E9' }} className="font-bold text-sm">Login</Text>
               </TouchableOpacity>
             </View>
           </View>
