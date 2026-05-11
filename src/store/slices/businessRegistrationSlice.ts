@@ -33,6 +33,7 @@ export interface BusinessRegistrationState {
 
   // Step 3 (new): Groups — single selection
   group_id: string;
+  group_name: string;
 
   // Current step
   currentStep: number;
@@ -52,6 +53,7 @@ const initialState: BusinessRegistrationState = {
   business_hours: {},
   business_photos: [],
   group_id: '',
+  group_name: '',
   currentStep: 1,
 };
 
@@ -114,8 +116,9 @@ const businessRegistrationSlice = createSlice({
       state.business_photos.splice(action.payload, 1);
     },
 
-    setGroupIds: (state, action: PayloadAction<string>) => {
-      state.group_id = action.payload;
+    setGroupIds: (state, action: PayloadAction<{ id: string; name: string }>) => {
+      state.group_id = action.payload.id;
+      state.group_name = action.payload.name;
     },
 
     setCurrentStep: (state, action: PayloadAction<number>) => {

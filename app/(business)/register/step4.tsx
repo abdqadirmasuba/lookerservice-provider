@@ -23,6 +23,7 @@ import {
   XMarkIcon,
   CameraIcon,
   PencilSquareIcon,
+  ExclamationTriangleIcon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon as CheckCircleSolid } from 'react-native-heroicons/solid';
 import { useDispatch, useSelector } from 'react-redux';
@@ -31,11 +32,14 @@ import {
   registerBusiness,
   presignUpload,
   uploadToS3,
+  getMe,
 } from '@/src/utils/business';
 import {
   resetBusinessRegistration,
   DayHoursState,
 } from '@/src/store/slices/businessRegistrationSlice';
+import { loginSuccess } from '@/src/store/slices/authSlice';
+import { setUser } from '@/src/store/slices/userSlice';
 
 const TOTAL_STEPS = 4;
 const CURRENT_STEP = 4;
@@ -185,7 +189,35 @@ export default function BusinessStep4Screen() {
       Alert.alert(
         'Business Registered!',
         "Your business has been submitted for review. You'll be notified once approved.",
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }],
+        [{
+          text: 'OK',
+          onPress: async () => {
+            try {
+              const meRes = await getMe();
+              if (meRes?.success && meRes?.data) {
+                dispatch(loginSuccess({
+                  token: meRes.data.access_token ?? meRes.data.token,
+                  refreshToken: meRes.data.refresh_token,
+                  providerBusinesses: meRes.data.provider_businesses || [],
+                  providerTier: meRes.data.user?.provider_tier === 'pro' ? 'pro' : 'free',
+                }));
+                dispatch(setUser({
+                  id: meRes.data.user.id,
+                  fullName: meRes.data.user.full_name,
+                  email: meRes.data.user.email,
+                  phone: meRes.data.user.phone,
+                  profileImage: meRes.data.user.profile_picture_url ?? undefined,
+                  isEmailVerified: meRes.data.user.email_verified,
+                  isPhoneVerified: meRes.data.user.phone_verified,
+                  createdAt: meRes.data.user.created_at,
+                }));
+              }
+            } catch (_) {
+              // silent — navigate regardless
+            }
+            router.replace('/(tabs)');
+          },
+        }],
       );
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to register business. Please try again.');
@@ -368,7 +400,7 @@ export default function BusinessStep4Screen() {
             <>
               {sectionHeader(<RectangleGroupIcon size={18} color="#10B981" />, 'Area of Service', 3)}
               <Text className="text-sm text-gray-600 dark:text-gray-400">
-                {reg.group_id ? reg.group_id : 'None selected'}
+                {reg.group_name ? reg.group_name : 'None selected'}
               </Text>
             </>
           )}
@@ -405,6 +437,14 @@ export default function BusinessStep4Screen() {
             <Text className="text-sky-700 dark:text-sky-400 text-xs leading-5">
               After submission your business will be reviewed. You'll receive a notification
               once approved, typically within 24–48 hours.
+            </Text>
+          </View>
+
+          {/* Immutability warning */}
+          <View className="flex-row items-start mt-3 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-800">
+            <ExclamationTriangleIcon size={14} color="#D97706" />
+            <Text className="text-xs text-amber-700 dark:text-amber-400 ml-2 flex-1 leading-4">
+              Some details (business name, service group) cannot be changed after submission. Please review carefully. Contact our support team if you ever need assistance.
             </Text>
           </View>
         </View>

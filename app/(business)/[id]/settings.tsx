@@ -1,12 +1,14 @@
-// File: app/(business)/[id]/settings.tsx
+﻿// File: app/(business)/[id]/settings.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  Switch,
+  Modal,
+  TextInput,
+  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -14,67 +16,53 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeftIcon,
-  BellIcon,
-  EyeIcon,
+  ClockIcon,
+  TagIcon,
+  PencilIcon,
   EyeSlashIcon,
   TrashIcon,
-  ShieldCheckIcon,
-  ClockIcon,
-  PhotoIcon,
   ChevronRightIcon,
+  ExclamationTriangleIcon,
 } from 'react-native-heroicons/outline';
+import { getProviderProfile } from '@/src/utils/business';
 
 export default function BusinessSettingsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const businessId = params.id as string;
 
-  // Settings state
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
-  const [isBusinessVisible, setIsBusinessVisible] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [smsNotifications, setSmsNotifications] = useState(false);
+  const [businessName, setBusinessName] = useState('');
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
-  const handleDeleteBusiness = () => {
-    Alert.alert(
-      'Delete Business',
-      'Are you sure you want to delete this business? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            // TODO: Delete business API call
-            Alert.alert('Success', 'Business deleted successfully', [
-              {
-                text: 'OK',
-                onPress: () => router.replace('/(business)/list'),
-              },
-            ]);
-          },
-        },
-      ]
-    );
+  const [deactivateModalVisible, setDeactivateModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deactivateInput, setDeactivateInput] = useState('');
+  const [deleteInput, setDeleteInput] = useState('');
+
+  useEffect(() => {
+    getProviderProfile(businessId)
+      .then((res) => setBusinessName(res.data?.business_name || ''))
+      .catch(() => {})
+      .finally(() => setLoadingProfile(false));
+  }, [businessId]);
+
+  const deactivateMatch = deactivateInput.trim() === businessName.trim() && businessName.trim() !== '';
+  const deleteMatch = deleteInput.trim() === businessName.trim() && businessName.trim() !== '';
+
+  const handleDeactivateConfirm = () => {
+    setDeactivateModalVisible(false);
+    setDeactivateInput('');
+    // TODO: call deactivate API endpoint
+    Alert.alert('Business Deactivated', 'Your business has been deactivated.');
   };
 
-  const handleDeactivateBusiness = () => {
-    Alert.alert(
-      'Deactivate Business',
-      'Your business will be hidden from clients. You can reactivate it anytime.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Deactivate',
-          style: 'destructive',
-          onPress: () => {
-            setIsBusinessVisible(false);
-            Alert.alert('Success', 'Business deactivated successfully');
-          },
-        },
-      ]
-    );
+  const handleDeleteConfirm = () => {
+    setDeleteModalVisible(false);
+    setDeleteInput('');
+    // TODO: call delete API endpoint
+    Alert.alert('Business Deleted', 'Your business has been permanently deleted.', [
+      { text: 'OK', onPress: () => router.replace('/(business)/list' as any) },
+    ]);
   };
 
   return (
@@ -93,209 +81,236 @@ export default function BusinessSettingsScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        <View className="px-6 py-6">
-          {/* Visibility */}
-          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              Visibility
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="px-6 py-6" style={{ gap: 16 }}>
+
+          {/* Profile */}
+          <View className="bg-white dark:bg-[#1E293B] rounded-2xl px-4 border border-gray-200 dark:border-[#334155]">
+            <Text className="text-xs font-bold text-gray-400 uppercase pt-4 pb-2 tracking-wide">
+              Profile
             </Text>
-
-            <View className="flex-row items-center justify-between py-3">
-              <View className="flex-row items-center flex-1">
-                {isBusinessVisible ? (
-                  <EyeIcon size={24} color="#10B981" />
-                ) : (
-                  <EyeSlashIcon size={24} color="#EF4444" />
-                )}
-                <View className="ml-3 flex-1">
-                  <Text className="font-bold text-gray-900 dark:text-white">
-                    Business Visibility
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">
-                    {isBusinessVisible ? 'Visible to clients' : 'Hidden from clients'}
-                  </Text>
-                </View>
+            <TouchableOpacity
+              onPress={() => router.push(`/(business)/${businessId}/edit` as any)}
+              className="flex-row items-center py-4"
+              activeOpacity={0.7}
+            >
+              <View className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-xl items-center justify-center mr-4">
+                <PencilIcon size={20} color="#F57C1F" />
               </View>
-              <Switch
-                value={isBusinessVisible}
-                onValueChange={setIsBusinessVisible}
-                trackColor={{ false: '#D1D5DB', true: '#F57C1F' }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
-
-          {/* Booking Preferences */}
-          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              Booking Preferences
-            </Text>
-
-            <View className="flex-row items-center justify-between py-3 border-b border-gray-200 dark:border-[#334155]">
-              <View className="flex-row items-center flex-1">
-                <ShieldCheckIcon size={24} color="#2DA9E9" />
-                <View className="ml-3 flex-1">
-                  <Text className="font-bold text-gray-900 dark:text-white">
-                    Auto-Accept Bookings
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">
-                    Automatically accept all booking requests
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={autoAcceptBookings}
-                onValueChange={setAutoAcceptBookings}
-                trackColor={{ false: '#D1D5DB', true: '#F57C1F' }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-
-            <TouchableOpacity className="flex-row items-center justify-between py-3">
-              <View className="flex-row items-center flex-1">
-                <ClockIcon size={24} color="#6B7280" />
-                <View className="ml-3 flex-1">
-                  <Text className="font-bold text-gray-900 dark:text-white">
-                    Business Hours
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">
-                    Set your availability schedule
-                  </Text>
-                </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                  Edit Profile
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Update business info, description & location
+                </Text>
               </View>
               <ChevronRightIcon size={20} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 
-          {/* Notifications */}
-          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              Notifications
+          {/* Preferences */}
+          <View className="bg-white dark:bg-[#1E293B] rounded-2xl px-4 border border-gray-200 dark:border-[#334155]">
+            <Text className="text-xs font-bold text-gray-400 uppercase pt-4 pb-2 tracking-wide">
+              Preferences
             </Text>
 
-            <View className="flex-row items-center justify-between py-3 border-b border-gray-200 dark:border-[#334155]">
-              <View className="flex-row items-center flex-1">
-                <BellIcon size={24} color="#F57C1F" />
-                <View className="ml-3 flex-1">
-                  <Text className="font-bold text-gray-900 dark:text-white">
-                    Push Notifications
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">
-                    Receive notifications in the app
-                  </Text>
-                </View>
+            <TouchableOpacity
+              onPress={() => router.push(`/(business)/${businessId}/edit-hours` as any)}
+              className="flex-row items-center py-4 border-b border-gray-100 dark:border-[#334155]"
+              activeOpacity={0.7}
+            >
+              <View className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl items-center justify-center mr-4">
+                <ClockIcon size={20} color="#6366F1" />
               </View>
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: '#D1D5DB', true: '#F57C1F' }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-
-            <View className="flex-row items-center justify-between py-3 border-b border-gray-200 dark:border-[#334155]">
               <View className="flex-1">
-                <Text className="font-bold text-gray-900 dark:text-white">
-                  Email Notifications
+                <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                  Business Hours
                 </Text>
-                <Text className="text-xs text-gray-500 mt-0.5">
-                  Receive notifications via email
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Set your weekly availability schedule
                 </Text>
               </View>
-              <Switch
-                value={emailNotifications}
-                onValueChange={setEmailNotifications}
-                trackColor={{ false: '#D1D5DB', true: '#F57C1F' }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
+              <ChevronRightIcon size={20} color="#9CA3AF" />
+            </TouchableOpacity>
 
-            <View className="flex-row items-center justify-between py-3">
+            <TouchableOpacity
+              onPress={() => router.push(`/(business)/${businessId}/categories` as any)}
+              className="flex-row items-center py-4"
+              activeOpacity={0.7}
+            >
+              <View className="w-10 h-10 bg-green-50 dark:bg-green-900/20 rounded-xl items-center justify-center mr-4">
+                <TagIcon size={20} color="#10B981" />
+              </View>
               <View className="flex-1">
-                <Text className="font-bold text-gray-900 dark:text-white">
-                  SMS Notifications
+                <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                  Manage Categories
                 </Text>
-                <Text className="text-xs text-gray-500 mt-0.5">
-                  Receive notifications via SMS
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Add or review your service categories
                 </Text>
-              </View>
-              <Switch
-                value={smsNotifications}
-                onValueChange={setSmsNotifications}
-                trackColor={{ false: '#D1D5DB', true: '#F57C1F' }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
-
-          {/* Media */}
-          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border border-gray-200 dark:border-[#334155]">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              Media
-            </Text>
-
-            <TouchableOpacity className="flex-row items-center justify-between py-3">
-              <View className="flex-row items-center flex-1">
-                <PhotoIcon size={24} color="#6B7280" />
-                <View className="ml-3 flex-1">
-                  <Text className="font-bold text-gray-900 dark:text-white">
-                    Manage Photos
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">
-                    Add, edit, or remove business photos
-                  </Text>
-                </View>
               </View>
               <ChevronRightIcon size={20} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 
           {/* Danger Zone */}
-          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4 border-2 border-red-200 dark:border-red-900/30">
-            <Text className="text-lg font-bold text-red-600 dark:text-red-400 mb-4">
+          <View className="bg-white dark:bg-[#1E293B] rounded-2xl px-4 border-2 border-red-200 dark:border-red-900/40">
+            <Text className="text-xs font-bold text-red-500 uppercase pt-4 pb-2 tracking-wide">
               Danger Zone
             </Text>
 
             <TouchableOpacity
-              onPress={handleDeactivateBusiness}
-              className="flex-row items-center py-3 border-b border-red-200 dark:border-red-900/30"
+              onPress={() => { setDeactivateInput(''); setDeactivateModalVisible(true); }}
+              className="flex-row items-center py-4 border-b border-red-100 dark:border-red-900/30"
+              activeOpacity={0.7}
             >
-              <EyeSlashIcon size={24} color="#EF4444" />
-              <View className="ml-3 flex-1">
-                <Text className="font-bold text-red-600 dark:text-red-400">
+              <View className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-xl items-center justify-center mr-4">
+                <EyeSlashIcon size={20} color="#EF4444" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-red-600 dark:text-red-400">
                   Deactivate Business
                 </Text>
-                <Text className="text-xs text-gray-500 mt-0.5">
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   Hide your business from clients temporarily
                 </Text>
               </View>
+              <ChevronRightIcon size={20} color="#EF4444" />
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleDeleteBusiness}
-              className="flex-row items-center py-3"
+              onPress={() => { setDeleteInput(''); setDeleteModalVisible(true); }}
+              className="flex-row items-center py-4"
+              activeOpacity={0.7}
             >
-              <TrashIcon size={24} color="#EF4444" />
-              <View className="ml-3 flex-1">
-                <Text className="font-bold text-red-600 dark:text-red-400">
+              <View className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-xl items-center justify-center mr-4">
+                <TrashIcon size={20} color="#EF4444" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-red-600 dark:text-red-400">
                   Delete Business
                 </Text>
-                <Text className="text-xs text-gray-500 mt-0.5">
-                  Permanently delete this business
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Permanently remove this business and all data
                 </Text>
               </View>
+              <ChevronRightIcon size={20} color="#EF4444" />
             </TouchableOpacity>
           </View>
 
-          {/* Info */}
-          <View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
-            <Text className="text-blue-700 dark:text-blue-400 text-sm">
-              💡 Need help with settings? Contact our support team for assistance.
-            </Text>
-          </View>
         </View>
       </ScrollView>
+
+      {/* Deactivate Confirmation Modal */}
+      <Modal
+        visible={deactivateModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeactivateModalVisible(false)}
+      >
+        <View
+          className="flex-1 justify-center items-center px-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+        >
+          <View className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 w-full">
+            <View className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-2xl items-center justify-center mb-4">
+              <ExclamationTriangleIcon size={24} color="#D97706" />
+            </View>
+            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Deactivate Business
+            </Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Your business will be hidden from clients. You can reactivate it at any time.{'\n\n'}
+              Type{' '}
+              <Text className="font-bold text-gray-900 dark:text-white">
+                {loadingProfile ? 'your business name' : `"${businessName}"`}
+              </Text>{' '}
+              to confirm:
+            </Text>
+            <TextInput
+              value={deactivateInput}
+              onChangeText={setDeactivateInput}
+              placeholder="Type business name here"
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              className="bg-gray-50 dark:bg-[#0F172A] border border-gray-200 dark:border-[#334155] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm mb-5"
+            />
+            <View className="flex-row" style={{ gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setDeactivateModalVisible(false)}
+                className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-[#0F172A] items-center"
+              >
+                <Text className="font-semibold text-gray-700 dark:text-gray-300">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDeactivateConfirm}
+                disabled={!deactivateMatch}
+                style={{ opacity: deactivateMatch ? 1 : 0.4 }}
+                className="flex-1 py-3 rounded-xl bg-amber-500 items-center"
+              >
+                <Text className="font-semibold text-white">Deactivate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View
+          className="flex-1 justify-center items-center px-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+        >
+          <View className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 w-full">
+            <View className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-2xl items-center justify-center mb-4">
+              <TrashIcon size={24} color="#EF4444" />
+            </View>
+            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Delete Business
+            </Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              This will permanently delete your business and all associated data. This action{' '}
+              <Text className="font-bold text-red-600 dark:text-red-400">cannot be undone</Text>.{'\n\n'}
+              Type{' '}
+              <Text className="font-bold text-gray-900 dark:text-white">
+                {loadingProfile ? 'your business name' : `"${businessName}"`}
+              </Text>{' '}
+              to confirm:
+            </Text>
+            <TextInput
+              value={deleteInput}
+              onChangeText={setDeleteInput}
+              placeholder="Type business name here"
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              className="bg-gray-50 dark:bg-[#0F172A] border border-gray-200 dark:border-[#334155] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm mb-5"
+            />
+            <View className="flex-row" style={{ gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setDeleteModalVisible(false)}
+                className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-[#0F172A] items-center"
+              >
+                <Text className="font-semibold text-gray-700 dark:text-gray-300">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDeleteConfirm}
+                disabled={!deleteMatch}
+                style={{ opacity: deleteMatch ? 1 : 0.4 }}
+                className="flex-1 py-3 rounded-xl bg-red-600 items-center"
+              >
+                <Text className="font-semibold text-white">Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }

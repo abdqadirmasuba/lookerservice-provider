@@ -24,6 +24,7 @@ import {
   GlobeAltIcon,
   CameraIcon,
   XMarkIcon,
+  ExclamationTriangleIcon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon } from 'react-native-heroicons/solid';
 import * as ImagePicker from 'expo-image-picker';
@@ -321,6 +322,13 @@ export default function BusinessStep1Screen() {
                 className="bg-white dark:bg-[#1E293B] rounded-xl px-4 text-gray-900 dark:text-white text-sm"
                 style={{ borderWidth: 2, borderColor: borderColor('name'), paddingVertical: 14 }}
               />
+              {/* Name lock warning */}
+              <View className="flex-row items-start mt-2 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg">
+                <ExclamationTriangleIcon size={13} color="#D97706" />
+                <Text className="text-xs text-amber-700 dark:text-amber-400 ml-1.5 flex-1">
+                  This cannot be changed after registration. Contact admin support if you need it updated.
+                </Text>
+              </View>
             </View>
 
             {/* Description */}

@@ -149,11 +149,38 @@ export const getProviderCategories = async (providerId: string) => {
   }
 };
 
+export const getAvailableProviderCategories = async (providerId: string) => {
+  try {
+    const response = await apiRequests.get(`/provider/${providerId}/categories/available`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const addProviderCategory = async (providerId: string, categoryId: string) => {
   try {
     const response = await apiRequests.post(`/provider/${providerId}/categories`, {
       category_id: categoryId,
     });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getProviderServices = async (providerId: string) => {
+  try {
+    const response = await apiRequests.get(`/provider/${providerId}/services`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getAvailableServices = async (providerId: string) => {
+  try {
+    const response = await apiRequests.get(`/provider/${providerId}/services/available`);
     return response.data;
   } catch (error) {
     throw error;
@@ -249,6 +276,101 @@ export const deleteProviderService = async (serviceId: string, categoryId: strin
         category_id: categoryId,
       },
     });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateBusinessHours = async (
+  providerId: string,
+  business_hours: { [day: string]: string },
+) => {
+  try {
+    const response = await apiRequests.patch(`/provider/profile/${providerId}/business-hours`, {
+      business_hours,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateBusinessProfile = async (
+  providerId: string,
+  data: {
+    business_description?: string;
+    service_delivery_type?: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
+    city?: string;
+    state_region?: string;
+    country?: string;
+    logo_url?: string;
+  },
+) => {
+  try {
+    const response = await apiRequests.put(`/provider/profile/${providerId}`, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const registerServiceItems = async (
+  providerId: string,
+  serviceId: string,
+  serviceList: Array<{
+    label: string;
+    amount?: number;
+    currency?: string;
+    image_urls: string[];
+  }>,
+) => {
+  try {
+    const response = await apiRequests.post(`/provider/${providerId}/services/register`, {
+      service_id: serviceId,
+      service_list: serviceList,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getProviderServiceDetail = async (providerId: string, serviceId: string) => {
+  try {
+    const response = await apiRequests.get(`/provider/${providerId}/services/${serviceId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateServiceItems = async (
+  providerId: string,
+  serviceId: string,
+  serviceList: Array<{
+    label: string;
+    amount?: number;
+    currency?: string;
+    image_urls: string[];
+  }>,
+) => {
+  try {
+    const response = await apiRequests.patch(`/provider/${providerId}/services/${serviceId}`, {
+      service_list: serviceList,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getMe = async () => {
+  try {
+    const response = await apiRequests.get('/auth/me');
     return response.data;
   } catch (error) {
     throw error;

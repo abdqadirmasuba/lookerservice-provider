@@ -7,52 +7,55 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
-  Image,
+  Alert,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SvgIcon from '@/src/components/common/SvgIcon';
 import {
-  ArrowLeftIcon,
   PlusIcon,
   CheckIcon,
   TagIcon,
+  RectangleGroupIcon,
 } from 'react-native-heroicons/outline';
+import { CheckCircleIcon } from 'react-native-heroicons/solid';
 import {
-  getActiveCategories,
+  getAvailableProviderCategories,
   getProviderCategories,
   addProviderCategory,
 } from '@/src/utils/business';
-import { useCustomAlert } from '@/src/components/common/CustomAlert';
 
-interface Category {
+interface AvailableCategory {
   id: string;
   name: string;
   description: string;
   icon_url?: string;
+  group_name: string;
+  sort_order: number;
   status: string;
 }
 
 interface ProviderCategory {
+  id: string;
   category_id: string;
   category_name: string;
   category_description: string;
   icon_url?: string;
+  status: string;
 }
 
 export default function ManageCategoriesScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const businessId = params.id as string;
-  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [available, setAvailable] = useState<AvailableCategory[]>([]);
   const [providerCategories, setProviderCategories] = useState<ProviderCategory[]>([]);
   const [addingCategoryId, setAddingCategoryId] = useState<string | null>(null);
-  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({});
+  const [confirmCategory, setConfirmCategory] = useState<AvailableCategory | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -61,230 +64,212 @@ export default function ManageCategoriesScreen() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [allCatsResponse, providerCatsResponse] = await Promise.all([
-        getActiveCategories(),
+      const [availRes, providerRes] = await Promise.all([
+        getAvailableProviderCategories(businessId),
         getProviderCategories(businessId),
       ]);
-
-      if (allCatsResponse.success) {
-        setAllCategories(allCatsResponse.data || []);
-      }
-
-      if (providerCatsResponse.success) {
-        setProviderCategories(providerCatsResponse.data || []);
-      }
+      if (availRes.success) setAvailable(availRes.data || []);
+      if (providerRes.success) setProviderCategories(providerRes.data || []);
     } catch (err: any) {
-      showAlert({
-        type: 'error',
-        title: 'Error',
-        message: err.message || 'Failed to load categories',
-        buttons: [{ text: 'OK', style: 'default' }],
-      });
+      Alert.alert('Error', err.message || 'Failed to load categories');
     } finally {
       setLoading(false);
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
-  };
-
-  const handleAddCategory = async (categoryId: string) => {
-    setAddingCategoryId(categoryId);
+  const handleConfirmAdd = async () => {
+    if (!confirmCategory) return;
+    const cat = confirmCategory;
+    setConfirmCategory(null);
+    setAddingCategoryId(cat.id);
     try {
-      const response = await addProviderCategory(businessId, categoryId);
-      
-      if (response.success) {
-        showAlert({
-          type: 'success',
-          title: 'Success',
-          message: 'Category added successfully',
-          buttons: [{ text: 'OK', style: 'default' }],
-        });
+      const res = await addProviderCategory(businessId, cat.id);
+      if (res.success) {
         await fetchData();
       } else {
-        showAlert({
-          type: 'error',
-          title: 'Error',
-          message: response.message || 'Failed to add category',
-          buttons: [{ text: 'OK', style: 'default' }],
-        });
+        Alert.alert('Error', res.message || 'Failed to add category');
       }
     } catch (err: any) {
-      showAlert({
-        type: 'error',
-        title: 'Error',
-        message: err.message || 'Failed to add category',
-        buttons: [{ text: 'OK', style: 'default' }],
-      });
+      Alert.alert('Error', err.message || 'Failed to add category');
     } finally {
       setAddingCategoryId(null);
     }
   };
 
-  const isCategoryAdded = (categoryId: string) => {
-    return providerCategories.some((pc) => pc.category_id === categoryId);
-  };
-
-  const handleImageError = (categoryId: string) => {
-    setImageErrors((prev) => ({ ...prev, [categoryId]: true }));
-  };
+  const addedIds = new Set(providerCategories.map((pc) => pc.category_id));
+  const unaddedCategories = available.filter((c) => !addedIds.has(c.id));
+  const hasCategories = providerCategories.length > 0;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-[#0F172A]">
       <StatusBar style="auto" />
 
-      {/* Header */}
-      <View className="px-6 pt-4 pb-4 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1">
-            <TouchableOpacity onPress={() => router.back()} className="mr-4">
-              <ArrowLeftIcon size={24} color="#6B7280" />
-            </TouchableOpacity>
-            <View>
-              <Text className="text-xl font-bold text-gray-900 dark:text-white">
-                Manage Categories
-              </Text>
-              <Text className="text-sm text-gray-500 dark:text-gray-400">
-                {providerCategories.length} categories added
-              </Text>
-            </View>
-          </View>
+      {/* Header — modal style (no back button) */}
+      <View className="px-5 pt-5 pb-4 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
+        <View className="flex-row items-center mb-1">
+          <RectangleGroupIcon size={26} color="#F57C1F" />
+          <Text className="text-xl font-bold text-gray-900 dark:text-white ml-2">
+            Choose Categories
+          </Text>
         </View>
+        <Text className="text-base text-gray-500 dark:text-gray-400">
+          Select the categories that describe your services. Add at least one to continue.
+        </Text>
       </View>
 
+      {/* Category list */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F57C1F" />
-        }
+        contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
       >
-        <View className="px-6 py-6">
-          {loading ? (
-            <View className="py-20 items-center">
-              <ActivityIndicator size="large" color="#F57C1F" />
-              <Text className="text-gray-600 dark:text-gray-400 mt-4">
-                Loading categories...
-              </Text>
-            </View>
-          ) : (
-            <>
-              {/* Info Card */}
-              <View className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 mb-6">
-                <Text className="text-blue-900 dark:text-blue-300 font-semibold mb-2">
-                  Add Categories First
+        {loading ? (
+          <View className="py-20 items-center">
+            <ActivityIndicator size="large" color="#F57C1F" />
+            <Text className="text-gray-500 dark:text-gray-400 mt-4 text-sm">
+              Loading categories...
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* Already-added categories */}
+            {providerCategories.length > 0 && (
+              <View className="mb-6">
+                <Text className="text-xs font-bold text-gray-400 uppercase mb-3">
+                  Added ({providerCategories.length})
                 </Text>
-                <Text className="text-blue-700 dark:text-blue-400 text-sm">
-                  You need to add categories to your business profile before you can manage services. Select the categories that match your business offerings.
-                </Text>
-              </View>
-
-              {/* My Categories */}
-              {providerCategories.length > 0 && (
-                <View className="mb-6">
-                  <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-                    My Categories
-                  </Text>
-                  {providerCategories.map((category) => (
+                <View style={{ gap: 8 }}>
+                  {providerCategories.map((cat) => (
                     <View
-                      key={category.category_id}
-                      className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-primary-200 dark:border-primary-800"
+                      key={cat.id}
+                      className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 flex-row items-center border border-green-200 dark:border-green-800"
                     >
-                      <View className="flex-row items-center">
-                        <View className="w-14 h-14 bg-primary-50 dark:bg-primary-900/20 rounded-xl items-center justify-center mr-4">
-                          {category.icon_url && !imageErrors[category.category_id] ? (
-                            <Image
-                              source={{ uri: category.icon_url }}
-                              className="w-8 h-8"
-                              resizeMode="contain"
-                              onError={() => handleImageError(category.category_id)}
-                            />
-                          ) : (
-                            <TagIcon size={32} color="#F57C1F" />
-                          )}
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-base font-bold text-gray-900 dark:text-white mb-1">
-                            {category.category_name}
+                      <View className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-2xl items-center justify-center mr-4 overflow-hidden">
+                        <SvgIcon uri={cat.icon_url} size={40} fallback="🏷️" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                          {cat.category_name}
+                        </Text>
+                        {cat.category_description ? (
+                          <Text className="text-sm text-gray-400 mt-0.5" numberOfLines={2}>
+                            {cat.category_description}
                           </Text>
-                          <Text className="text-sm text-gray-600 dark:text-gray-400">
-                            {category.category_description}
-                          </Text>
-                        </View>
-                        <View className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full items-center justify-center">
-                          <CheckIcon size={16} color="#10B981" />
-                        </View>
+                        ) : null}
+                      </View>
+                      <View className="w-9 h-9 bg-green-100 dark:bg-green-900/30 rounded-full items-center justify-center">
+                        <CheckIcon size={18} color="#10B981" />
                       </View>
                     </View>
                   ))}
                 </View>
-              )}
+              </View>
+            )}
 
-              {/* Available Categories */}
-              <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-                Available Categories
-              </Text>
-
-              {allCategories.filter((cat) => !isCategoryAdded(cat.id)).length === 0 ? (
-                <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
-                  <CheckIcon size={64} color="#10B981" />
-                  <Text className="text-gray-600 dark:text-gray-400 mt-4 text-center">
-                    You've added all available categories!
-                  </Text>
-                </View>
-              ) : (
-                allCategories
-                  .filter((category) => !isCategoryAdded(category.id))
-                  .map((category) => (
-                    <View
-                      key={category.id}
-                      className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-gray-200 dark:border-[#334155]"
-                    >
-                      <View className="flex-row items-center">
-                        <View className="w-14 h-14 bg-gray-50 dark:bg-[#0F172A] rounded-xl items-center justify-center mr-4">
-                          {category.icon_url && !imageErrors[category.id] ? (
-                            <Image
-                              source={{ uri: category.icon_url }}
-                              className="w-8 h-8"
-                              resizeMode="contain"
-                              onError={() => handleImageError(category.id)}
-                            />
-                          ) : (
-                            <TagIcon size={32} color="#9CA3AF" />
-                          )}
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-base font-bold text-gray-900 dark:text-white mb-1">
-                            {category.name}
-                          </Text>
-                          <Text className="text-sm text-gray-600 dark:text-gray-400">
-                            {category.description}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => handleAddCategory(category.id)}
-                          disabled={addingCategoryId === category.id}
-                          className="w-10 h-10 bg-primary-500 rounded-full items-center justify-center"
-                        >
-                          {addingCategoryId === category.id ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                          ) : (
-                            <PlusIcon size={20} color="#FFFFFF" />
-                          )}
-                        </TouchableOpacity>
-                      </View>
+            {/* Available categories */}
+            <Text className="text-xs font-bold text-gray-400 uppercase mb-3">
+              Available Categories
+            </Text>
+            {unaddedCategories.length === 0 ? (
+              <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center border border-gray-100 dark:border-[#334155]">
+                <CheckCircleIcon size={48} color="#10B981" />
+                <Text className="text-gray-500 dark:text-gray-400 mt-3 text-center text-sm">
+                  All available categories have been added!
+                </Text>
+              </View>
+            ) : (
+              <View style={{ gap: 8 }}>
+                {unaddedCategories.map((cat) => (
+                  <View
+                    key={cat.id}
+                    className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 flex-row items-center border border-gray-100 dark:border-[#334155]"
+                  >
+                    <View className="w-16 h-16 bg-gray-50 dark:bg-[#0F172A] rounded-2xl items-center justify-center mr-4 overflow-hidden">
+                      <SvgIcon uri={cat.icon_url} size={40} fallback="🏷️" />
                     </View>
-                  ))
-              )}
-            </>
-          )}
-        </View>
+                    <View className="flex-1 mr-3">
+                      <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                        {cat.name}
+                      </Text>
+                      {cat.description ? (
+                        <Text className="text-sm text-gray-400 mt-0.5" numberOfLines={2}>
+                          {cat.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => setConfirmCategory(cat)}
+                      disabled={addingCategoryId === cat.id}
+                      className="w-12 h-12 bg-orange-500 rounded-full items-center justify-center"
+                      activeOpacity={0.8}
+                    >
+                      {addingCategoryId === cat.id ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <PlusIcon size={24} color="#FFFFFF" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
       </ScrollView>
 
-      {/* Custom Alert */}
-      {AlertComponent}
+      {/* Confirmation modal */}
+      <Modal
+        visible={!!confirmCategory}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmCategory(null)}
+      >
+        <View
+          className="flex-1 items-center justify-center px-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <View className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 w-full max-w-sm">
+            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Add Category
+            </Text>
+            <Text className="text-base text-gray-600 dark:text-gray-400 mb-6">
+              Add{' '}
+              <Text className="font-bold text-gray-900 dark:text-white">
+                "{confirmCategory?.name}"
+              </Text>{' '}
+              to your business?
+            </Text>
+            <View className="flex-row" style={{ gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setConfirmCategory(null)}
+                className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-[#0F172A] items-center"
+              >
+                <Text className="font-semibold text-gray-700 dark:text-gray-300">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirmAdd}
+                className="flex-1 py-3 rounded-xl bg-orange-500 items-center"
+              >
+                <Text className="font-semibold text-white">Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Fixed bottom button */}
+      <View className="px-5 py-4 bg-white dark:bg-[#1E293B] border-t border-gray-200 dark:border-[#334155]">
+        <TouchableOpacity
+          onPress={() => router.replace(`/(business)/${businessId}/profile` as any)}
+          disabled={!hasCategories}
+          style={{ opacity: hasCategories ? 1 : 0.4 }}
+          className="bg-orange-500 py-4 rounded-xl items-center"
+          activeOpacity={0.85}
+        >
+          <Text className="text-white font-bold text-lg">
+            {hasCategories ? 'Continue to Business Profile' : 'Add at least one category'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }

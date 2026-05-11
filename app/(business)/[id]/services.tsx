@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeftIcon,
+  ArrowRightIcon,
   PlusIcon,
   PencilIcon,
   TrashIcon,
@@ -51,6 +52,7 @@ interface ProviderService {
   id: string;
   service_id: string;
   category_id: string;
+  category_name?: string;
   service_name: string;
   description?: string;
   pricing_type: string;
@@ -389,14 +391,31 @@ export default function ManageServicesScreen() {
                   key={service.id}
                   className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-3 border border-gray-200 dark:border-[#334155]"
                 >
-                  <View className="flex-row items-start justify-between mb-2">
-                    <View className="flex-1">
-                      <View className="flex-row items-center mb-1">
-                        <Text className="text-base font-bold text-gray-900 dark:text-white flex-1">
-                          {service.service_name}
+                  {/* Main info row + View button */}
+                  <View className="flex-row items-start">
+                    <View className="flex-1 mr-3">
+                      <Text className="text-base font-bold text-gray-900 dark:text-white mb-1">
+                        {service.service_name}
+                      </Text>
+                      {service.description ? (
+                        <Text
+                          className="text-sm text-gray-500 dark:text-gray-400 mb-2"
+                          numberOfLines={2}
+                        >
+                          {service.description}
                         </Text>
+                      ) : null}
+                      {/* Category + Status badges */}
+                      <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+                        {service.category_name ? (
+                          <View className="bg-secondary-50 dark:bg-secondary-500/20 px-2.5 py-1 rounded-full">
+                            <Text className="text-xs font-semibold text-secondary-600 dark:text-secondary-400">
+                              {service.category_name}
+                            </Text>
+                          </View>
+                        ) : null}
                         <View
-                          className={`px-2 py-1 rounded-full ${
+                          className={`px-2.5 py-1 rounded-full ${
                             service.status === 'active'
                               ? 'bg-green-100 dark:bg-green-900/20'
                               : service.status === 'hidden'
@@ -417,15 +436,24 @@ export default function ManageServicesScreen() {
                           </Text>
                         </View>
                       </View>
-                      <Text className="text-primary-500 font-bold mb-2">
-                        {getPriceDisplay(service)}
-                      </Text>
-                      {service.description && (
-                        <Text className="text-sm text-gray-600 dark:text-gray-400">
-                          {service.description}
-                        </Text>
-                      )}
                     </View>
+
+                    {/* View button */}
+                    <TouchableOpacity
+                      onPress={() =>
+                        router.push(
+                          `/(business)/${businessId}/view-service?service_id=${service.service_id}` as any,
+                        )
+                      }
+                      className="bg-secondary-50 dark:bg-secondary-500/20 px-3 py-2 rounded-xl flex-row items-center"
+                      style={{ gap: 4 }}
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-secondary-600 dark:text-secondary-400 font-semibold text-sm">
+                        View
+                      </Text>
+                      <ArrowRightIcon size={14} color="#2DA9E9" />
+                    </TouchableOpacity>
                   </View>
 
                   {/* Actions */}

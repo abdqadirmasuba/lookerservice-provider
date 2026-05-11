@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Image,
   useColorScheme,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -18,12 +17,14 @@ import {
   RectangleGroupIcon,
   XMarkIcon,
   ArrowPathIcon,
+  ExclamationTriangleIcon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon } from 'react-native-heroicons/solid';
 import { useDispatch, useSelector } from 'react-redux';
 import { setGroupIds } from '@/src/store/slices/businessRegistrationSlice';
 import { RootState } from '@/src/store';
 import { getActiveGroups } from '@/src/utils/business';
+import SvgIcon from '@/src/components/common/SvgIcon';
 
 const TOTAL_STEPS = 4;
 const CURRENT_STEP = 3;
@@ -49,7 +50,6 @@ export default function BusinessStep3Screen() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     fetchGroups();
@@ -90,7 +90,8 @@ export default function BusinessStep3Screen() {
       Alert.alert('Required', 'Please select the area your business operates in');
       return;
     }
-    dispatch(setGroupIds(selectedId));
+    const selectedGroup = groups.find((g) => g.id === selectedId);
+    dispatch(setGroupIds({ id: selectedId, name: selectedGroup?.name || '' }));
     router.push('/(business)/register/step4');
   };
 
@@ -175,7 +176,6 @@ export default function BusinessStep3Screen() {
             <View style={{ gap: 10 }}>
               {groups.map((group) => {
                 const isSelected = selectedId === group.id;
-                const iconColor = parseIconColor(group.icon_url);
                 return (
                   <TouchableOpacity
                     key={group.id}
@@ -195,24 +195,9 @@ export default function BusinessStep3Screen() {
                       {/* Icon */}
                       <View
                         className="mr-3 items-center justify-center rounded-xl"
-                        style={{
-                          width: 48,
-                          height: 48,
-                          backgroundColor: `${iconColor}18`,
-                        }}
+                        style={{ width: 48, height: 48, backgroundColor: isSelected ? 'rgba(249,115,22,0.12)' : 'rgba(156,163,175,0.12)' }}
                       >
-                        {group.icon_url && !imageErrors[group.id] ? (
-                          <Image
-                            source={{ uri: group.icon_url }}
-                            style={{ width: 28, height: 28 }}
-                            resizeMode="contain"
-                            onError={() =>
-                              setImageErrors((p) => ({ ...p, [group.id]: true }))
-                            }
-                          />
-                        ) : (
-                          <RectangleGroupIcon size={24} color={iconColor} />
-                        )}
+                        <SvgIcon uri={group.icon_url} size={28} fallback="💼" />
                       </View>
 
                       {/* Text */}
@@ -274,6 +259,16 @@ export default function BusinessStep3Screen() {
             <View className="bg-sky-50 dark:bg-sky-900/20 p-4 rounded-xl border border-sky-200 dark:border-sky-800 mt-6">
               <Text className="text-sky-700 dark:text-sky-400 text-xs">
                 Choose the category that most closely matches what your business does. This helps clients find you.
+              </Text>
+            </View>
+          )}
+
+          {/* Group lock warning */}
+          {!loading && (
+            <View className="flex-row items-start mt-3 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-800">
+              <ExclamationTriangleIcon size={14} color="#D97706" />
+              <Text className="text-xs text-amber-700 dark:text-amber-400 ml-2 flex-1">
+                Your service group cannot be changed after registration. If you need to update it, contact our support team.
               </Text>
             </View>
           )}
