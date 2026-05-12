@@ -1,0 +1,208 @@
+# Create new Expo project with TypeScript
+npx create-expo-app@latest LookerServiceProvider --template blank-typescript
+
+# Navigate to project
+cd LookerServiceProvider
+
+# Install dependencies
+npm install
+```
+
+---
+
+## 2. FOLDER STRUCTURE
+```
+LookerServiceProvider/
+├── app/                                # App directory (Expo Router)
+│   ├── (auth)/                        # Auth group (non-authenticated)
+│   │   ├── login.tsx
+│   │   ├── register.tsx
+│   │   ├── verify-email.tsx
+│   │   ├── verify-phone.tsx
+│   │   ├── forgot-password.tsx
+│   │   └── reset-password.tsx
+│   ├── (tabs)/                        # Main tabs (authenticated)
+│   │   ├── _layout.tsx                # Tab navigator
+│   │   ├── index.tsx                  # Home/Dashboard
+│   │   ├── requests.tsx               # Booking Requests
+│   │   ├── bookings.tsx               # All Bookings
+│   │   ├── messages.tsx               # Messages Inbox
+│   │   └── account.tsx                # Account/Profile
+│   ├── (business)/                    # Business management screens
+│   │   ├── register/                  # Business registration flow
+│   │   │   ├── step1.tsx              # Business details
+│   │   │   ├── step2.tsx              # Location
+│   │   │   ├── step3.tsx              # Photos
+│   │   │   ├── step4.tsx              # Services
+│   │   │   └── step5.tsx              # Review
+│   │   ├── [id]/                      # Dynamic business routes
+│   │   │   ├── profile.tsx
+│   │   │   ├── edit.tsx
+│   │   │   ├── services.tsx
+│   │   │   ├── analytics.tsx
+│   │   │   └── settings.tsx
+│   │   └── list.tsx                   # All businesses
+│   ├── (bookings)/                    # Booking related screens
+│   │   ├── [id].tsx                   # Booking detail
+│   │   ├── accept.tsx                 # Accept booking
+│   │   ├── reject.tsx                 # Reject booking
+│   │   ├── start.tsx                  # Start service
+│   │   ├── complete.tsx               # Complete service
+│   │   └── history.tsx                # Booking history
+│   ├── (bids)/                        # Bidding screens
+│   │   ├── available.tsx              # Available service requests
+│   │   ├── [requestId].tsx            # Request detail
+│   │   ├── submit.tsx                 # Submit bid
+│   │   ├── my-bids.tsx                # My bids list
+│   │   ├── bid/[id].tsx               # Bid detail
+│   │   └── won.tsx                    # Won bids
+│   ├── (earnings)/                    # Financial screens
+│   │   ├── dashboard.tsx              # Earnings dashboard
+│   │   ├── commissions.tsx            # Commission tracking
+│   │   ├── transactions.tsx           # Payment history
+│   │   ├── payouts.tsx                # Payout management
+│   │   └── reports.tsx                # Financial reports
+│   ├── (messages)/                    # Messaging screens
+│   │   ├── [conversationId].tsx       # Conversation thread
+│   │   ├── new.tsx                    # New message
+│   │   └── templates.tsx              # Message templates
+│   ├── (services)/                    # Service management
+│   │   ├── add.tsx                    # Add service
+│   │   ├── edit/[id].tsx              # Edit service
+│   │   └── list.tsx                   # Services list
+│   ├── (settings)/                    # Settings screens
+│   │   ├── index.tsx                  # Main settings
+│   │   ├── profile.tsx                # Edit profile
+│   │   ├── change-password.tsx
+│   │   ├── theme.tsx                  # Theme settings
+│   │   ├── notifications.tsx
+│   │   └── help.tsx                   # Help & support
+│   ├── _layout.tsx                    # Root layout
+│   ├── +not-found.tsx                 # 404 screen
+│   └── splash.tsx                     # Splash screen
+│
+├── src/
+│   ├── components/                    # Reusable components
+│   │   ├── common/                    # Common UI components
+│   │   │   ├── Button.tsx
+│   │   │   ├── Input.tsx
+│   │   │   ├── Card.tsx
+│   │   │   ├── Badge.tsx
+│   │   │   ├── Avatar.tsx
+│   │   │   ├── LoadingSpinner.tsx
+│   │   │   ├── EmptyState.tsx
+│   │   │   ├── ErrorBoundary.tsx
+│   │   │   └── SkeletonLoader.tsx
+│   │   ├── forms/                     # Form components
+│   │   │   ├── FormInput.tsx
+│   │   │   ├── FormSelect.tsx
+│   │   │   ├── FormTextarea.tsx
+│   │   │   ├── DateTimePicker.tsx
+│   │   │   ├── ImagePicker.tsx
+│   │   │   └── LocationPicker.tsx
+│   │   ├── layout/                    # Layout components
+│   │   │   ├── Header.tsx
+│   │   │   ├── TabBar.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   └── BottomSheet.tsx
+│   │   ├── business/                  # Business components
+│   │   │   ├── BusinessCard.tsx
+│   │   │   ├── ServiceCard.tsx
+│   │   │   ├── BusinessSelector.tsx
+│   │   │   └── PhotoGallery.tsx
+│   │   ├── bookings/                  # Booking components
+│   │   │   ├── BookingCard.tsx
+│   │   │   ├── BookingStatus.tsx
+│   │   │   ├── BookingTimeline.tsx
+│   │   │   └── ClientInfo.tsx
+│   │   ├── bids/                      # Bid components
+│   │   │   ├── BidCard.tsx
+│   │   │   ├── RequestCard.tsx
+│   │   │   └── BidForm.tsx
+│   │   ├── earnings/                  # Financial components
+│   │   │   ├── EarningsCard.tsx
+│   │   │   ├── CommissionCard.tsx
+│   │   │   ├── TransactionCard.tsx
+│   │   │   └── EarningsChart.tsx
+│   │   └── messages/                  # Message components
+│   │       ├── MessageBubble.tsx
+│   │       ├── ConversationCard.tsx
+│   │       └── ChatInput.tsx
+│   │
+│   ├── store/                         # Redux store
+│   │   ├── index.ts                   # Store configuration
+│   │   ├── rootReducer.ts             # Root reducer
+│   │   └── slices/                    # Redux slices
+│   │       ├── authSlice.ts           # Authentication
+│   │       ├── userSlice.ts           # User data
+│   │       ├── businessSlice.ts       # Business data
+│   │       ├── bookingSlice.ts        # Bookings
+│   │       ├── bidSlice.ts            # Bids
+│   │       ├── messageSlice.ts        # Messages
+│   │       ├── earningsSlice.ts       # Earnings
+│   │       ├── notificationSlice.ts   # Notifications
+│   │       └── themeSlice.ts          # Theme settings
+│   │
+│   ├── services/                      # API services
+│   │   ├── api.ts                     # Axios configuration
+│   │   ├── authService.ts             # Auth endpoints
+│   │   ├── businessService.ts         # Business endpoints
+│   │   ├── bookingService.ts          # Booking endpoints
+│   │   ├── bidService.ts              # Bid endpoints
+│   │   ├── messageService.ts          # Message endpoints
+│   │   ├── earningsService.ts         # Financial endpoints
+│   │   ├── uploadService.ts           # File upload
+│   │   └── notificationService.ts     # Notifications
+│   │
+│   ├── utils/                         # Utility functions
+│   │   ├── validation.ts              # Form validators
+│   │   ├── formatters.ts              # Data formatters (date, currency)
+│   │   ├── helpers.ts                 # Helper functions
+│   │   ├── constants.ts               # App constants
+│   │   ├── storage.ts                 # AsyncStorage helpers
+│   │   └── permissions.ts             # Device permissions
+│   │
+│   ├── hooks/                         # Custom hooks
+│   │   ├── useAuth.ts                 # Authentication hook
+│   │   ├── useBusiness.ts             # Business operations
+│   │   ├── useBookings.ts             # Bookings hook
+│   │   ├── useBids.ts                 # Bids hook
+│   │   ├── useMessages.ts             # Messages hook
+│   │   ├── useLocation.ts             # Location services
+│   │   ├── useCamera.ts               # Camera/Gallery
+│   │   ├── useNotifications.ts        # Push notifications
+│   │   └── useTheme.ts                # Theme hook
+│   │
+│   ├── navigation/                    # Navigation config
+│   │   ├── types.ts                   # Navigation types
+│   │   └── linking.ts                 # Deep linking config
+│   │
+│   ├── types/                         # TypeScript types
+│   │   ├── auth.types.ts
+│   │   ├── business.types.ts
+│   │   ├── booking.types.ts
+│   │   ├── bid.types.ts
+│   │   ├── message.types.ts
+│   │   ├── earnings.types.ts
+│   │   ├── user.types.ts
+│   │   └── api.types.ts
+│   │
+│   ├── theme/                         # Theme configuration
+│   │   ├── colors.ts                  # Color palette
+│   │   ├── typography.ts              # Font styles
+│   │   ├── spacing.ts                 # Spacing values
+│   │   └── index.ts                   # Theme exports
+│   │
+│   └── assets/                        # Static assets
+│       ├── images/                    # Images
+│       ├── icons/                     # Icon files
+│       └── fonts/                     # Custom fonts
+│
+├── .env                               # Environment variables
+├── .env.example                       # Environment template
+├── app.json                           # Expo configuration
+├── babel.config.js                    # Babel config
+├── metro.config.js                    # Metro bundler config
+├── tsconfig.json                      # TypeScript config
+├── package.json                       # Dependencies
+└── README.md                          # Project documentation
