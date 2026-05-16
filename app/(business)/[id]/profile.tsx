@@ -9,6 +9,7 @@ import {
   Image,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -27,13 +28,32 @@ import {
   TruckIcon,
 } from 'react-native-heroicons/outline';
 import { SparklesIcon } from 'react-native-heroicons/solid';
-import { getProviderProfile, getProviderServices } from '@/src/utils/business';
+import { getProviderProfile, enableBusiness } from '@/src/utils/business';
 import SvgIcon from '@/src/components/common/SvgIcon';
 
 interface DayHours {
-  open: string;
-  close: string;
+  open: string | null;
+  close: string | null;
   is_open: boolean;
+}
+
+interface ServiceListItem {
+  label: string;
+  amount?: number;
+  currency?: string;
+  image_urls?: string[];
+}
+
+interface ProfileService {
+  provider_service_id: string;
+  service_id: string;
+  service_name: string;
+  service_icon_url?: string;
+  category_id?: string;
+  category_name?: string;
+  service_list?: ServiceListItem[];
+  status: string;
+  created_at: string;
 }
 
 interface BusinessProfile {
@@ -47,11 +67,13 @@ interface BusinessProfile {
   city: string;
   state_region: string;
   country: string;
+  business_status: string;
+  provider_type?: string;
   verification_status: string;
   categories_count: number;
   services_count: number;
   group_count: number;
-  services: any[];
+  services: ProfileService[];
   reviews: any[];
   review_summary: { total_reviews: number; average_rating: number };
   booking_stats: {
@@ -64,19 +86,6 @@ interface BusinessProfile {
   created_at: string;
   updated_at: string;
   approved_at?: string;
-}
-
-interface ProviderService {
-  id: string;
-  service_id: string;
-  service_name: string;
-  service_icon_url?: string;
-  category_name?: string;
-  description?: string;
-  pricing_type?: string;
-  base_price?: number;
-  currency?: string;
-  status: string;
 }
 
 const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -99,6 +108,23 @@ function getDeliveryConfig(type?: string) {
   }
 }
 
+function getBusinessStatusConfig(status: string) {
+  switch (status) {
+    case 'active':   return { bg: '#10B981', label: 'Active' };
+    case 'inactive': return { bg: '#6B7280', label: 'Inactive' };
+    default:         return { bg: '#6B7280', label: status || 'Unknown' };
+  }
+}
+
+function getProviderTypeLabel(type?: string): string {
+  const labels: Record<string, string> = {
+    individual: 'Individual',
+    business: 'Business',
+    company: 'Company',
+  };
+  return type ? (labels[type] || type) : '';
+}
+
 export default function BusinessProfileScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -110,11 +136,7 @@ export default function BusinessProfileScreen() {
   const [business, setBusiness] = useState<BusinessProfile | null>(null);
   const [selectedTab, setSelectedTab] = useState<'about' | 'services' | 'reviews'>('about');
   const [logoError, setLogoError] = useState(false);
-
-  // Services tab state
-  const [providerServices, setProviderServices] = useState<ProviderService[]>([]);
-  const [servicesLoading, setServicesLoading] = useState(false);
-  const [servicesFetched, setServicesFetched] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
 
   useEffect(() => {
     fetchBusinessProfile();
@@ -126,13 +148,6 @@ export default function BusinessProfileScreen() {
       router.replace(`/(business)/${businessId}/categories` as any);
     }
   }, [business]);
-
-  // Fetch services when services tab is selected (lazy, once)
-  useEffect(() => {
-    if (selectedTab === 'services' && !servicesFetched) {
-      fetchProviderServices();
-    }
-  }, [selectedTab]);
 
   const fetchBusinessProfile = async () => {
     try {
@@ -147,24 +162,35 @@ export default function BusinessProfileScreen() {
     }
   };
 
-  const fetchProviderServices = async () => {
-    try {
-      setServicesLoading(true);
-      const res = await getProviderServices(businessId);
-      if (res.success) setProviderServices(res.data || []);
-    } catch {
-      // silently fail — empty state shows CTA
-    } finally {
-      setServicesLoading(false);
-      setServicesFetched(true);
-    }
-  };
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setServicesFetched(false);
     fetchBusinessProfile().finally(() => setRefreshing(false));
   }, [businessId]);
+
+  const handleActivate = () => {
+    Alert.alert(
+      'Activate Business',
+      'Your business will become visible to clients again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Activate',
+          onPress: async () => {
+            setIsActivating(true);
+            try {
+              await enableBusiness(businessId);
+              await fetchBusinessProfile();
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to activate. Please try again.');
+            } finally {
+              setIsActivating(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   /* ── Loading ── */
   if (loading) {
@@ -210,6 +236,7 @@ export default function BusinessProfileScreen() {
   }
 
   const status = getStatusConfig(business.verification_status);
+  const businessStatusCfg = getBusinessStatusConfig(business.business_status);
   const delivery = getDeliveryConfig(business.service_delivery_type);
   const noServices = business.services_count === 0;
 
@@ -263,11 +290,24 @@ export default function BusinessProfileScreen() {
 
             {/* Name + badges */}
             <View className="flex-1">
-              <Text className="text-white text-xl font-bold mb-1">
+              <Text className="text-white text-xl font-bold mb-0.5">
                 {business.business_name}
               </Text>
-              {/* Status + delivery type badges on same row */}
+              {business.provider_type ? (
+                <Text className="text-white/65 text-xs mb-1.5">
+                  {getProviderTypeLabel(business.provider_type)}
+                </Text>
+              ) : null}
+              {/* Status badges */}
               <View className="flex-row flex-wrap items-center mb-1.5" style={{ gap: 6 }}>
+                {/* Business status (active / inactive) */}
+                <View
+                  className="self-start px-2.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: businessStatusCfg.bg }}
+                >
+                  <Text className="text-white text-xs font-semibold">{businessStatusCfg.label}</Text>
+                </View>
+                {/* Verification status */}
                 <View
                   className="self-start px-2.5 py-0.5 rounded-full"
                   style={{ backgroundColor: status.bg }}
@@ -291,6 +331,22 @@ export default function BusinessProfileScreen() {
                 </Text>
               </View>
             </View>
+
+            {/* Activate button — shown only when business is inactive */}
+            {business.business_status === 'inactive' && (
+              <TouchableOpacity
+                onPress={handleActivate}
+                disabled={isActivating}
+                className="ml-3 items-center justify-center bg-white/20 border border-white/40 px-3 py-2 rounded-xl"
+                activeOpacity={0.8}
+              >
+                {isActivating ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text className="text-white text-xs font-bold">Activate</Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </LinearGradient>
 
@@ -480,17 +536,10 @@ export default function BusinessProfileScreen() {
           {/* ── SERVICES ── */}
           {selectedTab === 'services' && (
             <View style={{ gap: 12 }}>
-              {servicesLoading ? (
-                <View className="py-16 items-center">
-                  <ActivityIndicator size="large" color="#F57C1F" />
-                  <Text className="text-gray-500 dark:text-gray-400 mt-4 text-sm">
-                    Loading services...
-                  </Text>
-                </View>
-              ) : providerServices.length > 0 ? (
-                providerServices.map((service) => (
+              {(business.services ?? []).length > 0 ? (
+                (business.services ?? []).map((service) => (
                   <TouchableOpacity
-                    key={service.id}
+                    key={service.provider_service_id}
                     onPress={() =>
                       router.push(
                         `/(business)/${businessId}/view-service?service_id=${service.service_id}` as any,
@@ -504,22 +553,31 @@ export default function BusinessProfileScreen() {
                         <SvgIcon uri={service.service_icon_url} size={28} fallback="🛠️" />
                       </View>
                       <View className="flex-1">
-                        <Text className="text-base font-bold text-gray-900 dark:text-white mb-1">
-                          {service.service_name}
-                        </Text>
+                        <View className="flex-row items-center justify-between mb-1">
+                          <Text className="text-base font-bold text-gray-900 dark:text-white flex-1 mr-2">
+                            {service.service_name}
+                          </Text>
+                          {service.service_list && service.service_list.length > 0 && (
+                            <View className="bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full">
+                              <Text className="text-xs font-semibold text-orange-600 dark:text-orange-400">
+                                {service.service_list.length} item{service.service_list.length !== 1 ? 's' : ''}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
                         {service.category_name && (
                           <Text className="text-xs text-orange-500 font-medium mb-1">
                             {service.category_name}
                           </Text>
                         )}
-                        {service.description ? (
-                          <Text
-                            className="text-sm text-gray-500 dark:text-gray-400"
-                            numberOfLines={2}
-                          >
-                            {service.description}
+                        {service.service_list && service.service_list.length > 0 && (
+                          <Text className="text-sm text-gray-500 dark:text-gray-400" numberOfLines={1}>
+                            {service.service_list[0].label}
+                            {service.service_list[0].amount != null
+                              ? ` · UGX ${service.service_list[0].amount.toLocaleString()}`
+                              : ''}
                           </Text>
-                        ) : null}
+                        )}
                       </View>
                     </View>
                   </TouchableOpacity>

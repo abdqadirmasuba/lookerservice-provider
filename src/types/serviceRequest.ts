@@ -1,3 +1,70 @@
+// ── List endpoint shapes ──────────────────────────────────────────────────────
+
+/** Service entry returned in the list (GET …/direct) */
+export interface DirectRequestServiceSummary {
+  service_name: string;
+  icon_url: string;
+}
+
+/** Single card returned by GET …/direct */
+export interface DirectRequestSummary {
+  id: string;
+  request_number: string;
+  status: 'open' | 'closed' | 'in_progress' | 'completed' | 'cancelled';
+  provider_response: 'pending' | 'accepted' | 'rejected';
+  client_name: string;
+  client_picture: string | null;
+  services: DirectRequestServiceSummary[];
+  created_at: string;
+}
+
+// ── Detail endpoint shapes ────────────────────────────────────────────────────
+
+/** One priced line-item inside a service */
+export interface ServiceRequestItem {
+  label: string;
+  amount: number;
+  currency: string;
+}
+
+/** Service entry returned in the detail (GET …/:id) */
+export interface DirectRequestServiceDetail {
+  id: string;
+  service_name: string;
+  service_icon: string;
+  items: ServiceRequestItem[];
+}
+
+/** Full request object returned by GET …/:id */
+export interface DirectRequestDetail {
+  id: string;
+  request_number: string;
+  request_type: string;
+  status: 'open' | 'closed' | 'in_progress' | 'completed' | 'cancelled';
+  provider_response: 'pending' | 'accepted' | 'rejected';
+  response_message: string | null;
+  description: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  city: string;
+  budget_min: number | null;
+  budget_max: number | null;
+  preferred_date: string | null;
+  deadline: string | null;
+  images: string[] | string;
+  services: DirectRequestServiceDetail[];
+  client_name: string;
+  client_email: string;
+  client_phone: string | null;
+  client_picture: string | null;
+  bid_count: number;
+  has_bid: boolean;
+  created_at: string;
+}
+
+// ── Legacy shape (kept for any remaining usages) ──────────────────────────────
+
 export interface ServiceRequestService {
   category_icon?: string;
   category_name: string;

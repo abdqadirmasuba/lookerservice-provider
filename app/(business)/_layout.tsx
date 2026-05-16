@@ -19,7 +19,6 @@ export default function BusinessLayout() {
       <Stack.Screen name="register/step2" />
       <Stack.Screen name="register/step3" />
       <Stack.Screen name="register/step4" />
-      <Stack.Screen name="register/step5" />
       <Stack.Screen name="[id]/profile" />
       <Stack.Screen name="[id]/edit" />
       <Stack.Screen name="[id]/services" />

@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { config } from './apiConfig';
+import api from './apiRequest';
 
 export function handleRegistrationError(errorMessage: string): never {
   throw new Error(errorMessage);
@@ -77,19 +78,13 @@ export async function registerDeviceToken(accessToken: string): Promise<void> {
 
     const body = {
       token,
-      device_type: Platform.OS === 'android' ? 'android' : 'ios',
       device_name: Device.deviceName ?? 'Unknown Device',
-      app_version: Constants.expoConfig?.version ?? '1.0.0',
+      app_version: Constants.expoConfig?.version ?? 'unknown',
     };
 
-    await fetch(`${config.domain_url}/notifications/device-token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(body),
-    });
+    // Use the axios instance so the request interceptor automatically injects
+    // both the Authorization and X-Installation-ID headers.
+    await api.post('/notifications/device-token', body);
   } catch {
     // Fail silently — token registration is best-effort
   }

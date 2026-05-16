@@ -23,8 +23,11 @@ import {
   TrashIcon,
   ChevronRightIcon,
   ExclamationTriangleIcon,
+  ChartBarIcon,
+  BanknotesIcon,
+  CheckCircleIcon,
 } from 'react-native-heroicons/outline';
-import { getProviderProfile } from '@/src/utils/business';
+import { getProviderProfile, disableBusiness, enableBusiness } from '@/src/utils/business';
 
 export default function BusinessSettingsScreen() {
   const router = useRouter();
@@ -32,7 +35,9 @@ export default function BusinessSettingsScreen() {
   const businessId = params.id as string;
 
   const [businessName, setBusinessName] = useState('');
+  const [businessStatus, setBusinessStatus] = useState<'active' | 'inactive' | ''>('');
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   const [deactivateModalVisible, setDeactivateModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -41,7 +46,10 @@ export default function BusinessSettingsScreen() {
 
   useEffect(() => {
     getProviderProfile(businessId)
-      .then((res) => setBusinessName(res.data?.business_name || ''))
+      .then((res) => {
+        setBusinessName(res.data?.business_name || '');
+        setBusinessStatus(res.data?.business_status || '');
+      })
       .catch(() => {})
       .finally(() => setLoadingProfile(false));
   }, [businessId]);
@@ -49,11 +57,44 @@ export default function BusinessSettingsScreen() {
   const deactivateMatch = deactivateInput.trim() === businessName.trim() && businessName.trim() !== '';
   const deleteMatch = deleteInput.trim() === businessName.trim() && businessName.trim() !== '';
 
-  const handleDeactivateConfirm = () => {
-    setDeactivateModalVisible(false);
-    setDeactivateInput('');
-    // TODO: call deactivate API endpoint
-    Alert.alert('Business Deactivated', 'Your business has been deactivated.');
+  const handleDeactivateConfirm = async () => {
+    setIsActionLoading(true);
+    try {
+      await disableBusiness(businessId);
+      setDeactivateModalVisible(false);
+      setDeactivateInput('');
+      setBusinessStatus('inactive');
+      Alert.alert('Business Deactivated', 'Your business is now hidden from clients.');
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to deactivate. Please try again.');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleActivateConfirm = () => {
+    Alert.alert(
+      'Activate Business',
+      'Your business will become visible to clients again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Activate',
+          onPress: async () => {
+            setIsActionLoading(true);
+            try {
+              await enableBusiness(businessId);
+              setBusinessStatus('active');
+              Alert.alert('Business Activated', 'Your business is now active and visible to clients.');
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to activate. Please try again.');
+            } finally {
+              setIsActionLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleDeleteConfirm = () => {
@@ -83,6 +124,51 @@ export default function BusinessSettingsScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="px-6 py-6" style={{ gap: 16 }}>
+
+          {/* Insights */}
+          <View className="bg-white dark:bg-[#1E293B] rounded-2xl px-4 border border-gray-200 dark:border-[#334155]">
+            <Text className="text-xs font-bold text-gray-400 uppercase pt-4 pb-2 tracking-wide">
+              Insights
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => router.push(`/(business)/${businessId}/analytics` as any)}
+              className="flex-row items-center py-4 border-b border-gray-100 dark:border-[#334155]"
+              activeOpacity={0.7}
+            >
+              <View className="w-10 h-10 bg-violet-50 dark:bg-violet-900/20 rounded-xl items-center justify-center mr-4">
+                <ChartBarIcon size={20} color="#8B5CF6" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                  Analytics
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  View business performance & trends
+                </Text>
+              </View>
+              <ChevronRightIcon size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/(earnings)' as any)}
+              className="flex-row items-center py-4"
+              activeOpacity={0.7}
+            >
+              <View className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl items-center justify-center mr-4">
+                <BanknotesIcon size={20} color="#10B981" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                  Transactions
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Track income and payouts
+                </Text>
+              </View>
+              <ChevronRightIcon size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
 
           {/* Profile */}
           <View className="bg-white dark:bg-[#1E293B] rounded-2xl px-4 border border-gray-200 dark:border-[#334155]">
@@ -160,24 +246,52 @@ export default function BusinessSettingsScreen() {
               Danger Zone
             </Text>
 
-            <TouchableOpacity
-              onPress={() => { setDeactivateInput(''); setDeactivateModalVisible(true); }}
-              className="flex-row items-center py-4 border-b border-red-100 dark:border-red-900/30"
-              activeOpacity={0.7}
-            >
-              <View className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-xl items-center justify-center mr-4">
-                <EyeSlashIcon size={20} color="#EF4444" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-semibold text-red-600 dark:text-red-400">
-                  Deactivate Business
-                </Text>
-                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                  Hide your business from clients temporarily
-                </Text>
-              </View>
-              <ChevronRightIcon size={20} color="#EF4444" />
-            </TouchableOpacity>
+            {/* Toggle: Activate (orange) when inactive, Deactivate (red) when active */}
+            {businessStatus === 'inactive' ? (
+              <TouchableOpacity
+                onPress={handleActivateConfirm}
+                disabled={isActionLoading}
+                className="flex-row items-center py-4 border-b border-gray-100 dark:border-[#334155]"
+                activeOpacity={0.7}
+              >
+                <View className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-xl items-center justify-center mr-4">
+                  {isActionLoading ? (
+                    <ActivityIndicator size="small" color="#F57C1F" />
+                  ) : (
+                    <CheckCircleIcon size={20} color="#F57C1F" />
+                  )}
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-orange-500 dark:text-orange-400">
+                    Activate Business
+                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    Make your business visible to clients again
+                  </Text>
+                </View>
+                <ChevronRightIcon size={20} color="#F57C1F" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={() => { setDeactivateInput(''); setDeactivateModalVisible(true); }}
+                disabled={isActionLoading}
+                className="flex-row items-center py-4 border-b border-red-100 dark:border-red-900/30"
+                activeOpacity={0.7}
+              >
+                <View className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-xl items-center justify-center mr-4">
+                  <EyeSlashIcon size={20} color="#EF4444" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-red-600 dark:text-red-400">
+                    Deactivate Business
+                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    Hide your business from clients temporarily
+                  </Text>
+                </View>
+                <ChevronRightIcon size={20} color="#EF4444" />
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               onPress={() => { setDeleteInput(''); setDeleteModalVisible(true); }}
@@ -245,11 +359,15 @@ export default function BusinessSettingsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleDeactivateConfirm}
-                disabled={!deactivateMatch}
-                style={{ opacity: deactivateMatch ? 1 : 0.4 }}
-                className="flex-1 py-3 rounded-xl bg-amber-500 items-center"
+                disabled={!deactivateMatch || isActionLoading}
+                style={{ opacity: deactivateMatch && !isActionLoading ? 1 : 0.4 }}
+                className="flex-1 py-3 rounded-xl bg-red-600 items-center"
               >
-                <Text className="font-semibold text-white">Deactivate</Text>
+                {isActionLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text className="font-semibold text-white">Deactivate</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

@@ -60,6 +60,12 @@ const DELIVERY_LABELS: Record<string, string> = {
   both: 'Both (On-site & Remote)',
 };
 
+const PROVIDER_TYPE_LABELS: Record<string, string> = {
+  individual: 'Individual',
+  business: 'Business',
+  company: 'Company',
+};
+
 function buildHoursPayload(
   hours: Record<string, DayHoursState>,
 ): Record<string, { open: string | null; close: string | null; is_open: boolean }> {
@@ -172,6 +178,7 @@ export default function BusinessStep4Screen() {
         business_name: reg.business_name,
         business_description: reg.business_description,
         service_delivery_type: reg.service_delivery_type,
+        provider_type: reg.provider_type,
         longitude: reg.longitude!,
         latitude: reg.latitude!,
         address: reg.address,
@@ -320,8 +327,12 @@ export default function BusinessStep4Screen() {
                     {reg.business_name}
                   </Text>
                 </View>
-                <View>
-                  <Text className="text-xs text-gray-400 mb-0.5">Description</Text>
+                <View>                  <Text className="text-xs text-gray-400 mb-0.5">Provider Type</Text>
+                  <Text className="text-sm font-semibold text-gray-900 dark:text-white capitalize">
+                    {PROVIDER_TYPE_LABELS[reg.provider_type] || reg.provider_type || '—'}
+                  </Text>
+                </View>
+                <View>                  <Text className="text-xs text-gray-400 mb-0.5">Description</Text>
                   <Text className="text-sm text-gray-700 dark:text-gray-300" numberOfLines={3}>
                     {reg.business_description}
                   </Text>

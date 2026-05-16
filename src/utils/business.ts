@@ -47,6 +47,7 @@ export const registerBusiness = async (data: {
   business_name: string;
   business_description: string;
   service_delivery_type: string;
+  provider_type: string;
   longitude: number;
   latitude: number;
   address: string;
@@ -134,6 +135,24 @@ export const getProviderBusinesses = async () => {
 export const getProviderProfile = async (providerId: string) => {
   try {
     const response = await apiRequests.get(`/provider/profile/${providerId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const disableBusiness = async (providerId: string) => {
+  try {
+    const response = await apiRequests.post(`/provider/${providerId}/disable`, {});
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const enableBusiness = async (providerId: string) => {
+  try {
+    const response = await apiRequests.post(`/provider/${providerId}/reactivate`, {});
     return response.data;
   } catch (error) {
     throw error;

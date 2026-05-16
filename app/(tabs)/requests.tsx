@@ -21,7 +21,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
 import { apiRequests } from '@/src/utils/apiRequest';
 import { showErrorAlert } from '@/src/utils/alerts';
-import { ServiceRequest } from '@/src/types/serviceRequest';
+import { DirectRequestSummary } from '@/src/types/serviceRequest';
 import {
   ClockIcon,
   CheckIcon,
@@ -392,10 +392,10 @@ function ExploreModal({ visible, onClose }: ExploreModalProps) {
   const [detailVisible, setDetailVisible] = useState(false);
   const [bidVisible, setBidVisible] = useState(false);
 
-  const handleCardPress = (req: OpenRequest) => {
+  const handleCardPress = useCallback((req: OpenRequest) => {
     setSelectedRequest(req);
     setDetailVisible(true);
-  };
+  }, []);
 
   const handleViewDetails = () => {
     // detailVisible already open
@@ -406,10 +406,10 @@ function ExploreModal({ visible, onClose }: ExploreModalProps) {
     setBidVisible(true);
   };
 
-  const handleBidDirect = (req: OpenRequest) => {
+  const handleBidDirect = useCallback((req: OpenRequest) => {
     setSelectedRequest(req);
     setBidVisible(true);
-  };
+  }, []);
 
   const handleBidSubmit = (bid: any) => {
     setBidVisible(false);
@@ -444,7 +444,7 @@ function ExploreModal({ visible, onClose }: ExploreModalProps) {
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
+            renderItem={useCallback(({ item }: { item: OpenRequest }) => (
               <View className="bg-white dark:bg-[#1E293B] rounded-2xl mb-4 overflow-hidden border border-gray-100 dark:border-[#334155]">
                 {/* Top bar */}
                 <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
@@ -506,7 +506,7 @@ function ExploreModal({ visible, onClose }: ExploreModalProps) {
                   </TouchableOpacity>
                 </View>
               </View>
-            )}
+            ), [handleCardPress, handleBidDirect])}
           />
         </SafeAreaView>
       </Modal>
@@ -535,7 +535,7 @@ export default function RequestsScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [directRequests, setDirectRequests] = useState<ServiceRequest[]>([]);
+  const [directRequests, setDirectRequests] = useState<DirectRequestSummary[]>([]);
   const [exploreVisible, setExploreVisible] = useState(false);
 
   const activeBusinessId = useSelector((state: RootState) => state.auth.activeBusinessId);
@@ -649,103 +649,118 @@ function ClipboardDocumentListIconPlaceholder() {
 }
 
 interface DirectRequestCardProps {
-  request: ServiceRequest;
+  request: DirectRequestSummary;
   onPress: () => void;
 }
 
 function DirectRequestCard({ request, onPress }: DirectRequestCardProps) {
-  const statusConfig = {
-    pending: { bg: 'bg-orange-100 dark:bg-orange-900/30', icon: <ClockIcon size={15} color="#F59E0B" />, label: 'Pending', textColor: 'text-orange-600' },
-    accepted: { bg: 'bg-green-100 dark:bg-green-900/30', icon: <CheckIcon size={15} color="#10B981" />, label: 'Accepted', textColor: 'text-green-600' },
-    rejected: { bg: 'bg-red-100 dark:bg-red-900/30', icon: <XMarkIcon size={15} color="#EF4444" />, label: 'Rejected', textColor: 'text-red-500' },
-  };
+  const resp = request.provider_response ?? 'pending';
 
-  const resp = request.provider_response?.provider_response_type ?? 'pending';
-  const config = statusConfig[resp] ?? statusConfig.pending;
-
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const formatTime = (d: string) =>
-    new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const badgeStyle = {
+    pending: { bg: '#FFF7ED', border: '#FDBA74', text: '#EA580C', label: 'Pending' },
+    accepted: { bg: '#F0FDF4', border: '#86EFAC', text: '#16A34A', label: 'Accepted' },
+    rejected: { bg: '#FEF2F2', border: '#FCA5A5', text: '#DC2626', label: 'Rejected' },
+  }[resp] ?? { bg: '#FFF7ED', border: '#FDBA74', text: '#EA580C', label: 'Pending' };
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      activeOpacity={0.75}
-      className="bg-white dark:bg-[#1E293B] rounded-2xl mb-4 overflow-hidden border border-gray-100 dark:border-[#334155]"
+      activeOpacity={0.72}
+      className="bg-white dark:bg-[#1E293B] rounded-2xl mb-4 overflow-hidden"
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: resp === 'accepted' ? '#BBF7D0' : resp === 'rejected' ? '#FECACA' : '#F1F5F9',
+      }}
     >
-      {/* Header */}
-      <View className="flex-row items-center px-4 pt-4 pb-3 border-b border-gray-50 dark:border-[#334155]">
-        <View className="w-11 h-11 bg-primary-50 dark:bg-primary-900/20 rounded-full items-center justify-center mr-3">
-          <Text className="text-primary-500 font-bold text-lg">
+      {/* Top accent bar */}
+      <View
+        style={{
+          height: 3,
+          backgroundColor:
+            resp === 'accepted' ? '#22C55E' : resp === 'rejected' ? '#EF4444' : '#F57C1F',
+        }}
+      />
+
+      {/* Client row */}
+      <View className="flex-row items-center px-4 pt-3 pb-3">
+        <View
+          className="w-10 h-10 rounded-full items-center justify-center mr-3"
+          style={{ backgroundColor: '#FFF0E6' }}
+        >
+          <Text style={{ color: '#F57C1F', fontWeight: '700', fontSize: 16 }}>
             {request.client_name.charAt(0).toUpperCase()}
           </Text>
         </View>
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 dark:text-white text-sm">{request.client_name}</Text>
-          <Text className="text-xs text-gray-400">{timeAgo(request.created_at)}</Text>
+          <Text className="font-bold text-gray-900 dark:text-white text-sm" numberOfLines={1}>
+            {request.client_name}
+          </Text>
+          <Text className="text-xs text-gray-400 mt-0.5">{timeAgo(request.created_at)}</Text>
         </View>
-        <View className={`flex-row items-center px-2.5 py-1 rounded-full ${config.bg}`}>
-          {config.icon}
-          <Text className={`text-xs font-semibold ml-1 ${config.textColor}`}>{config.label}</Text>
+        {/* Status badge */}
+        <View
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 999,
+            backgroundColor: badgeStyle.bg,
+            borderWidth: 1,
+            borderColor: badgeStyle.border,
+          }}
+        >
+          <Text style={{ color: badgeStyle.text, fontSize: 11, fontWeight: '700' }}>
+            {badgeStyle.label}
+          </Text>
         </View>
       </View>
 
-      <View className="px-4 py-3">
-        {/* Request number */}
-        <Text className="text-xs text-gray-400 mb-2">{request.request_number}</Text>
+      {/* Divider */}
+      <View className="mx-4 border-t border-gray-100 dark:border-[#334155]" />
 
-        {/* Services */}
-        <View className="flex-row flex-wrap mb-2" style={{ gap: 5 }}>
-          {request.services.map((s) => (
-            <View key={s.id} className="bg-blue-50 dark:bg-blue-900/20 px-2.5 py-0.5 rounded-full flex-row items-center">
+      {/* Body */}
+      <View className="px-4 pt-3 pb-2">
+        {/* Request number */}
+        <Text className="text-xs text-gray-400 mb-2 font-medium">{request.request_number}</Text>
+
+        {/* Service pills */}
+        <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+          {request.services.map((s, i) => (
+            <View
+              key={i}
+              className="flex-row items-center rounded-full px-2.5 py-1"
+              style={{ backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' }}
+            >
               <TagIcon size={10} color="#3B82F6" />
-              <Text className="text-blue-600 dark:text-blue-400 text-xs ml-1">{s.service_name}</Text>
+              <Text style={{ color: '#2563EB', fontSize: 11, fontWeight: '600', marginLeft: 4 }}>
+                {s.service_name}
+              </Text>
             </View>
           ))}
         </View>
-
-        {/* Description */}
-        <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3 leading-4" numberOfLines={2}>
-          {request.description}
-        </Text>
-
-        {/* Details */}
-        <View style={{ gap: 5 }}>
-          <View className="flex-row items-center">
-            <MapPinIcon size={13} color="#9CA3AF" />
-            <Text className="text-xs text-gray-500 dark:text-gray-400 ml-1.5">
-              {request.address}, {request.city}
-            </Text>
-          </View>
-          <View className="flex-row items-center">
-            <CalendarIcon size={13} color="#9CA3AF" />
-            <Text className="text-xs text-gray-500 dark:text-gray-400 ml-1.5">
-              {formatDate(request.preferred_date)} at {formatTime(request.preferred_date)}
-            </Text>
-          </View>
-          <View className="flex-row items-center">
-            <CurrencyDollarIcon size={13} color="#9CA3AF" />
-            <Text className="text-xs text-gray-500 dark:text-gray-400 ml-1.5">
-              Budget: {formatCurrency(request.budget_min)} – {formatCurrency(request.budget_max)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Responded message */}
-        {resp !== 'pending' && (
-          <View className={`mt-3 px-3 py-2 rounded-lg ${resp === 'accepted' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-            <Text className={`text-xs font-medium ${resp === 'accepted' ? 'text-green-600' : 'text-red-500'}`}>
-              {resp === 'accepted' ? 'You accepted this request' : 'You rejected this request'}
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Footer */}
-      <View className="flex-row items-center justify-end px-4 pb-3">
-        <Text className="text-xs text-primary-500 font-semibold mr-1">View Details</Text>
-        <ChevronRightIcon size={14} color="#F57C1F" />
+      <View className="flex-row items-center justify-between px-4 pb-3 pt-1">
+        {resp !== 'pending' ? (
+          <Text
+            style={{ fontSize: 11, fontWeight: '500', color: resp === 'accepted' ? '#16A34A' : '#DC2626' }}
+          >
+            {resp === 'accepted' ? '✓ You accepted this request' : '✕ You rejected this request'}
+          </Text>
+        ) : (
+          <Text style={{ fontSize: 11, color: '#9CA3AF' }}>
+            {request.services.length} service{request.services.length !== 1 ? 's' : ''} requested
+          </Text>
+        )}
+        <View className="flex-row items-center">
+          <Text className="text-xs text-primary-500 font-semibold mr-0.5">View</Text>
+          <ChevronRightIcon size={13} color="#F57C1F" />
+        </View>
       </View>
     </TouchableOpacity>
   );

@@ -19,7 +19,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
 import { apiRequests } from '@/src/utils/apiRequest';
 import { showErrorAlert } from '@/src/utils/alerts';
-import { ServiceRequest } from '@/src/types/serviceRequest';
+import { DirectRequestDetail } from '@/src/types/serviceRequest';
 import {
   ArrowLeftIcon,
   MapPinIcon,
@@ -37,7 +37,7 @@ import {
 export default function ServiceRequestDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [request, setRequest] = useState<ServiceRequest | null>(null);
+  const [request, setRequest] = useState<DirectRequestDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -198,7 +198,7 @@ export default function ServiceRequestDetailScreen() {
   }
 
   const images = parseImages(request.images);
-  const isPending = request.provider_response.provider_response_type === 'pending';
+  const isPending = request.provider_response === 'pending';
 
   const formatBookingDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -421,20 +421,20 @@ export default function ServiceRequestDetailScreen() {
           </Text>
         </View>
         <View className={`px-3 py-1 rounded-full ${
-          request.provider_response.provider_response_type === 'pending' 
+          request.provider_response === 'pending' 
             ? 'bg-orange-100' 
-            : request.provider_response.provider_response_type === 'accepted'
+            : request.provider_response === 'accepted'
             ? 'bg-green-100'
             : 'bg-red-100'
         }`}>
           <Text className={`text-xs font-bold ${
-            request.provider_response.provider_response_type === 'pending'
+            request.provider_response === 'pending'
               ? 'text-orange-600'
-              : request.provider_response.provider_response_type === 'accepted'
+              : request.provider_response === 'accepted'
               ? 'text-green-600'
               : 'text-red-600'
           }`}>
-            {request.provider_response.provider_response_type.toUpperCase()}
+            {request.provider_response.toUpperCase()}
           </Text>
         </View>
       </View>
@@ -490,32 +490,44 @@ export default function ServiceRequestDetailScreen() {
               REQUESTED SERVICES
             </Text>
             {request.services.map((service, index) => (
-              <View 
-                key={service.id} 
-                className={`flex-row items-center py-3 ${
-                  index < request.services.length - 1 ? 'border-b border-gray-200 dark:border-[#334155]' : ''
+              <View
+                key={service.id}
+                className={`pb-3 ${
+                  index < request.services.length - 1 ? 'border-b border-gray-100 dark:border-[#334155] mb-3' : ''
                 }`}
               >
-                {service.service_icon ? (
-                  <Image 
-                    source={{ uri: service.service_icon }}
-                    className="w-10 h-10 rounded-full mr-3"
-                  />
-                ) : (
-                  <View className="w-10 h-10 bg-primary-50 rounded-full items-center justify-center mr-3">
-                    <Text className="text-primary-500 font-bold">
+                {/* Service header */}
+                <View className="flex-row items-center mb-2">
+                  <View className="w-9 h-9 bg-primary-50 rounded-full items-center justify-center mr-3">
+                    <Text className="text-primary-500 font-bold text-base">
                       {service.service_name.charAt(0).toUpperCase()}
                     </Text>
                   </View>
-                )}
-                <View className="flex-1">
-                  <Text className="font-bold text-gray-900 dark:text-white">
+                  <Text className="font-bold text-gray-900 dark:text-white flex-1" numberOfLines={2}>
                     {service.service_name}
                   </Text>
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    {service.category_name}
-                  </Text>
                 </View>
+
+                {/* Items */}
+                {service.items && service.items.length > 0 && (
+                  <View className="ml-12 bg-gray-50 dark:bg-[#0F172A] rounded-xl overflow-hidden">
+                    {service.items.map((item, idx) => (
+                      <View
+                        key={idx}
+                        className={`flex-row items-center justify-between px-3 py-2 ${
+                          idx < service.items.length - 1 ? 'border-b border-gray-100 dark:border-[#1E293B]' : ''
+                        }`}
+                      >
+                        <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1" numberOfLines={1}>
+                          {item.label}
+                        </Text>
+                        <Text className="text-sm font-semibold text-primary-500 ml-2">
+                          {item.currency} {item.amount.toLocaleString()}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             ))}
           </View>
@@ -536,59 +548,74 @@ export default function ServiceRequestDetailScreen() {
               LOCATION & SCHEDULE
             </Text>
             
-            <View className="space-y-3">
-              <View className="flex-row items-start">
-                <MapPinIcon size={20} color="#F57C1F" />
-                <View className="ml-3 flex-1">
-                  <Text className="text-gray-900 dark:text-white font-medium">
-                    {request.address}
-                  </Text>
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    {request.city}
-                  </Text>
+            <View style={{ gap: 12 }}>
+              {(request.address || request.city) ? (
+                <View className="flex-row items-start">
+                  <MapPinIcon size={20} color="#F57C1F" />
+                  <View className="ml-3 flex-1">
+                    {request.address ? (
+                      <Text className="text-gray-900 dark:text-white font-medium">{request.address}</Text>
+                    ) : null}
+                    {request.city ? (
+                      <Text className="text-sm text-gray-500 dark:text-gray-400">{request.city}</Text>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
+              ) : (
+                <View className="flex-row items-center">
+                  <MapPinIcon size={20} color="#D1D5DB" />
+                  <Text className="ml-3 text-sm text-gray-400 dark:text-gray-500">No location specified</Text>
+                </View>
+              )}
 
-              <View className="flex-row items-center">
-                <CalendarIcon size={20} color="#F57C1F" />
-                <View className="ml-3 flex-1">
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    Preferred Date
-                  </Text>
-                  <Text className="text-gray-900 dark:text-white font-medium">
-                    {formatDate(request.preferred_date)}
-                  </Text>
+              {request.preferred_date ? (
+                <View className="flex-row items-center">
+                  <CalendarIcon size={20} color="#F57C1F" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-sm text-gray-500 dark:text-gray-400">Preferred Date</Text>
+                    <Text className="text-gray-900 dark:text-white font-medium">
+                      {formatDate(request.preferred_date)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              ) : null}
 
-              <View className="flex-row items-center">
-                <ClockIcon size={20} color="#F57C1F" />
-                <View className="ml-3 flex-1">
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    Deadline
-                  </Text>
-                  <Text className="text-gray-900 dark:text-white font-medium">
-                    {formatDate(request.deadline)}
-                  </Text>
+              {request.deadline ? (
+                <View className="flex-row items-center">
+                  <ClockIcon size={20} color="#F57C1F" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-sm text-gray-500 dark:text-gray-400">Deadline</Text>
+                    <Text className="text-gray-900 dark:text-white font-medium">
+                      {formatDate(request.deadline)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              ) : null}
+
+              {!request.preferred_date && !request.deadline && !request.address && !request.city && (
+                <Text className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">
+                  No schedule or location details provided
+                </Text>
+              )}
             </View>
           </View>
 
           {/* Budget */}
-          <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4">
-            <Text className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3">
-              BUDGET RANGE
-            </Text>
-            <View className="flex-row items-center">
-              <CurrencyDollarIcon size={24} color="#F57C1F" />
-              <View className="ml-3">
-                <Text className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(request.budget_min)} - {formatCurrency(request.budget_max)}
-                </Text>
+          {(request.budget_min != null || request.budget_max != null) && (
+            <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4">
+              <Text className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3">
+                BUDGET RANGE
+              </Text>
+              <View className="flex-row items-center">
+                <CurrencyDollarIcon size={24} color="#F57C1F" />
+                <View className="ml-3">
+                  <Text className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {formatCurrency(request.budget_min)} - {formatCurrency(request.budget_max)}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
+          )}
 
           {/* Images */}
           <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-4">

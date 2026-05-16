@@ -27,6 +27,11 @@ api.interceptors.request.use(
       cfg.headers.Authorization = `Bearer ${authtoken}`;
     }
 
+    const installationId = state.auth.installationId;
+    if (installationId) {
+      cfg.headers['X-Installation-ID'] = installationId;
+    }
+
     return cfg;
   },
   (error) => Promise.reject(error),

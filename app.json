@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Provider",
+    "name": "LookerSvc Provider",
     "slug": "lookerservice-provider",
     "scheme": "lookerserviceprovider",
     "version": "1.0.0",

@@ -2,6 +2,8 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export type ServiceDeliveryType = 'onsite' | 'remote' | 'both' | '';
 
+export type ProviderType = 'individual' | 'business' | 'company' | '';
+
 export type DayMode = 'closed' | 'working' | 'fullday';
 
 export interface DayHoursState {
@@ -15,6 +17,7 @@ export interface BusinessRegistrationState {
   business_name: string;
   business_description: string;
   service_delivery_type: ServiceDeliveryType;
+  provider_type: ProviderType;
   longitude: number | null;
   latitude: number | null;
   address: string;
@@ -43,6 +46,7 @@ const initialState: BusinessRegistrationState = {
   business_name: '',
   business_description: '',
   service_delivery_type: '',
+  provider_type: '',
   longitude: null,
   latitude: null,
   address: '',
@@ -67,11 +71,13 @@ const businessRegistrationSlice = createSlice({
         business_name: string;
         business_description: string;
         service_delivery_type: ServiceDeliveryType;
+        provider_type: ProviderType;
       }>
     ) => {
       state.business_name = action.payload.business_name;
       state.business_description = action.payload.business_description;
       state.service_delivery_type = action.payload.service_delivery_type;
+      state.provider_type = action.payload.provider_type;
     },
 
     setLocation: (

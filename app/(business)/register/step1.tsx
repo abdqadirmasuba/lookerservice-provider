@@ -25,6 +25,8 @@ import {
   CameraIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
+  UserIcon,
+  BuildingOffice2Icon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon } from 'react-native-heroicons/solid';
 import * as ImagePicker from 'expo-image-picker';
@@ -35,6 +37,7 @@ import {
   setLocation,
   setBusinessLogo,
   ServiceDeliveryType,
+  ProviderType,
 } from '@/src/store/slices/businessRegistrationSlice';
 import { RootState } from '@/src/store';
 
@@ -68,6 +71,32 @@ const DELIVERY_TYPES: {
   },
 ];
 
+const PROVIDER_TYPES: {
+  value: ProviderType;
+  label: string;
+  description: string;
+  icon: (color: string) => React.ReactNode;
+}[] = [
+  {
+    value: 'individual',
+    label: 'Individual',
+    description: 'Solo service provider',
+    icon: (color) => <UserIcon size={22} color={color} />,
+  },
+  {
+    value: 'business',
+    label: 'Business',
+    description: 'Registered small business',
+    icon: (color) => <BuildingStorefrontIcon size={22} color={color} />,
+  },
+  {
+    value: 'company',
+    label: 'Company',
+    description: 'Incorporated company',
+    icon: (color) => <BuildingOffice2Icon size={22} color={color} />,
+  },
+];
+
 export default function BusinessStep1Screen() {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -79,6 +108,9 @@ export default function BusinessStep1Screen() {
   const [description, setDescription] = useState(reg.business_description);
   const [deliveryType, setDeliveryType] = useState<ServiceDeliveryType>(
     reg.service_delivery_type || 'onsite',
+  );
+  const [providerType, setProviderType] = useState<ProviderType>(
+    reg.provider_type || '',
   );
   const [logoUri, setLogoUri] = useState<string | null>(reg.business_logo || null);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
@@ -173,6 +205,10 @@ export default function BusinessStep1Screen() {
       Alert.alert('Required', 'Please enter a business description');
       return;
     }
+    if (!providerType) {
+      Alert.alert('Required', 'Please select a provider type');
+      return;
+    }
     if (!coords) {
       Alert.alert('Required', 'Please pin your business location on the map');
       return;
@@ -187,6 +223,7 @@ export default function BusinessStep1Screen() {
         business_name: businessName,
         business_description: description,
         service_delivery_type: deliveryType,
+        provider_type: providerType,
       }),
     );
     dispatch(
@@ -355,6 +392,57 @@ export default function BusinessStep1Screen() {
               <Text className="text-xs text-gray-400 mt-1.5 text-right">
                 {description.length}/500
               </Text>
+            </View>
+
+            {/* Provider Type */}
+            <View className="mb-7">
+              <View className="flex-row items-center mb-4">
+                <View className="flex-1 h-px bg-gray-200 dark:bg-[#334155]" />
+                <View className="flex-row items-center mx-3">
+                  <UserIcon size={12} color="#8B5CF6" />
+                  <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-1.5">
+                    Provider Type <Text className="text-red-500">*</Text>
+                  </Text>
+                </View>
+                <View className="flex-1 h-px bg-gray-200 dark:bg-[#334155]" />
+              </View>
+              <View className="flex-row" style={{ gap: 8 }}>
+                {PROVIDER_TYPES.map((type) => {
+                  const isSelected = providerType === type.value;
+                  return (
+                    <TouchableOpacity
+                      key={type.value}
+                      onPress={() => setProviderType(type.value)}
+                      activeOpacity={0.75}
+                      className={`flex-1 items-center py-4 px-2 rounded-xl ${
+                        isSelected
+                          ? 'bg-violet-50 dark:bg-violet-900/20'
+                          : 'bg-white dark:bg-[#1E293B]'
+                      }`}
+                      style={{ borderWidth: 2, borderColor: isSelected ? '#8B5CF6' : inactiveBorder }}
+                    >
+                      {type.icon(isSelected ? '#8B5CF6' : '#9CA3AF')}
+                      <Text
+                        className={`text-xs font-bold mt-2 text-center ${
+                          isSelected
+                            ? 'text-violet-600 dark:text-violet-400'
+                            : 'text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        {type.label}
+                      </Text>
+                      <Text
+                        className={`text-xs mt-0.5 text-center ${
+                          isSelected ? 'text-violet-500' : 'text-gray-400'
+                        }`}
+                        numberOfLines={1}
+                      >
+                        {type.description}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             {/* Separator: Service Delivery */}

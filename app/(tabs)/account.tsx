@@ -14,16 +14,13 @@ import {
   BuildingStorefrontIcon,
   Cog6ToothIcon,
   BellIcon,
-  PaintBrushIcon,
   QuestionMarkCircleIcon,
-  ShieldCheckIcon,
   ArrowRightOnRectangleIcon,
   ChevronRightIcon,
   PencilIcon,
-  StarIcon,
-  ChartBarIcon,
-  CurrencyDollarIcon,
   ArrowsRightLeftIcon,
+  SparklesIcon,
+  CheckBadgeIcon,
 } from 'react-native-heroicons/outline';
 
 export default function AccountScreen() {
@@ -98,26 +95,35 @@ export default function AccountScreen() {
 
             {/* Stats */}
             <View className="flex-row mt-6 w-full">
+              {/* Tier */}
               <View className="flex-1 items-center">
                 <View className="flex-row items-center mb-1">
-                  <StarIcon size={16} color="#FFF" />
-                  <Text className="text-white text-xl font-bold ml-1">4.8</Text>
+                  <SparklesIcon size={15} color="#FFF" />
+                  <Text className="text-white text-base font-bold ml-1 capitalize">
+                    {providerTier}
+                  </Text>
                 </View>
-                <Text className="text-white/70 text-xs">Rating</Text>
+                <Text className="text-white/70 text-xs">Plan</Text>
               </View>
+              {/* Businesses */}
               <View className="flex-1 items-center border-x border-white/30">
                 <View className="flex-row items-center mb-1">
-                  <ChartBarIcon size={16} color="#FFF" />
-                  <Text className="text-white text-xl font-bold ml-1">0</Text>
+                  <BuildingStorefrontIcon size={15} color="#FFF" />
+                  <Text className="text-white text-xl font-bold ml-1">
+                    {providerBusinesses?.length ?? 0}
+                  </Text>
                 </View>
-                <Text className="text-white/70 text-xs">Jobs Done</Text>
+                <Text className="text-white/70 text-xs">Businesses</Text>
               </View>
+              {/* Verified */}
               <View className="flex-1 items-center">
                 <View className="flex-row items-center mb-1">
-                  <CurrencyDollarIcon size={16} color="#FFF" />
-                  <Text className="text-white text-xl font-bold ml-1">0</Text>
+                  <CheckBadgeIcon size={15} color={userData?.isEmailVerified ? '#86EFAC' : '#FCA5A5'} />
+                  <Text className="text-white text-base font-bold ml-1">
+                    {userData?.isEmailVerified ? 'Yes' : 'No'}
+                  </Text>
                 </View>
-                <Text className="text-white/70 text-xs">Income</Text>
+                <Text className="text-white/70 text-xs">Verified</Text>
               </View>
             </View>
           </View>
@@ -151,20 +157,6 @@ export default function AccountScreen() {
                   ? router.push('/(business)/list')
                   : router.push(`/(business)/${activeBusinessId}/profile`)
               }
-            />
-            <Divider />
-            <MenuItem
-              icon={<ChartBarIcon size={24} color="#F57C1F" />}
-              title="Analytics"
-              subtitle="View business performance"
-              onPress={() => router.push('/(business)/1/analytics')}
-            />
-            <Divider />
-            <MenuItem
-              icon={<CurrencyDollarIcon size={24} color="#F57C1F" />}
-              title="Transactions"
-              subtitle="Track your income and payouts"
-              onPress={() => router.push('/(earnings)')}
               showBorder={false}
             />
           </View>
@@ -189,13 +181,6 @@ export default function AccountScreen() {
             />
             <Divider />
             <MenuItem
-              icon={<PaintBrushIcon size={24} color="#F57C1F" />}
-              title="Theme"
-              subtitle="Choose your app appearance"
-              onPress={() => router.push('/(settings)/theme')}
-            />
-            <Divider />
-            <MenuItem
               icon={<Cog6ToothIcon size={24} color="#F57C1F" />}
               title="App Settings"
               subtitle="General app preferences"
@@ -212,15 +197,8 @@ export default function AccountScreen() {
             <MenuItem
               icon={<QuestionMarkCircleIcon size={24} color="#F57C1F" />}
               title="Help & Support"
-              subtitle="Get help with your account"
+              subtitle="Chat with our AI assistant"
               onPress={() => router.push('/(settings)/help')}
-            />
-            <Divider />
-            <MenuItem
-              icon={<ShieldCheckIcon size={24} color="#F57C1F" />}
-              title="Privacy & Security"
-              subtitle="Manage your privacy settings"
-              onPress={() => router.push('/(settings)/change-password')}
               showBorder={false}
             />
           </View>

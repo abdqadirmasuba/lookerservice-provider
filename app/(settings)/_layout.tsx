@@ -6,6 +6,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="profile" />
+      <Stack.Screen name="help" />
     </Stack>
   );
 }

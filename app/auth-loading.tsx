@@ -1,14 +1,16 @@
 // File: app/auth-loading.tsx
 
 import React, { useEffect, useState } from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
-import { loginSuccess, loginFailure } from '@/src/store/slices/authSlice';
+import { loginSuccess, loginFailure, setInstallationId } from '@/src/store/slices/authSlice';
 import { setUser } from '@/src/store/slices/userSlice';
 import { REFRESH_TOKEN_KEY } from '@/src/utils/refreshTokenStorage';
+import { INSTALLATION_ID_KEY } from '@/src/utils/installationStorage';
 import { registerDeviceToken } from '@/src/utils/pushNotifications';
+import * as Device from 'expo-device';
 
 import Animated, {
   useSharedValue,
@@ -47,26 +49,58 @@ export default function AuthLoadingScreen() {
   const logoScale = useSharedValue(1);
   const [status, setStatus] = useState<'loading' | 'error'>('loading');
 
-  useEffect(() => {
-    logoScale.value = withRepeat(
-      withSequence(
-        withTiming(1.12, { duration: 900, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.94, { duration: 900, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      false,
-    );
-    checkAuthStatus();
-  }, []);
+  /**
+   * Ensures a device installation record exists.
+   * Rehydrates Redux from AsyncStorage if already stored; otherwise calls
+   * the /installations endpoint and persists the returned ID.
+   * Errors are swallowed — this is best-effort and must not block the auth flow.
+   */
+  const ensureInstallation = async (): Promise<void> => {
+    try {
+      const storedId = await AsyncStorage.getItem(INSTALLATION_ID_KEY);
+      if (storedId) {
+        dispatch(setInstallationId(storedId));
+        return;
+      }
 
-  const logoStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoScale.value }],
-  }));
+      // Gather device info
+      const deviceType = Platform.OS; // 'android' | 'ios'
+      const deviceName = Device.deviceName ?? 'Unknown Device';
+
+
+
+      const installationPayload = {
+        device_type: deviceType,
+        user_role: 'provider',
+        device_name: deviceName,
+      };
+      console.log('[Installation] Posting to /installations:', installationPayload);
+
+      const response = await fetch(`${API_BASE_URL}/installations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(installationPayload),
+      });
+
+      if (response.ok) {
+        const res = await response.json();
+        if (res.success && res.data?.installation_id) {
+          await AsyncStorage.setItem(INSTALLATION_ID_KEY, res.data.installation_id);
+          dispatch(setInstallationId(res.data.installation_id));
+        }
+      }
+    } catch {
+      // Installation creation failure must not block the auth flow
+    }
+  };
 
   const checkAuthStatus = async () => {
     setStatus('loading');
     try {
-      // Step 1: Check if user has seen onboarding
+      // Step 1: Ensure device installation record exists (rehydrate or create)
+      await ensureInstallation();
+
+      // Step 2: Check if user has seen onboarding
       const hasSeenOnboarding = await AsyncStorage.getItem(ONBOARDING_KEY);      
       if (!hasSeenOnboarding) {
         // First time user - show onboarding
@@ -76,7 +110,7 @@ export default function AuthLoadingScreen() {
         return;
       }
 
-      // Step 2: Check for refresh token
+      // Step 3: Check for refresh token
       const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
       if (!refreshToken) {
         setTimeout(() => {
@@ -84,7 +118,7 @@ export default function AuthLoadingScreen() {
         }, 1000);
         return;
       }
-      // Step 3: Try to refresh authentication (with network timeout)
+      // Step 4: Try to refresh authentication (with network timeout)
       const response = await withTimeout(
         fetch(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
@@ -106,9 +140,9 @@ export default function AuthLoadingScreen() {
       if (!res.success || !res.data) {
         throw new Error('Invalid response structure');
       }
-      // Step 4: Update AsyncStorage with new refresh token
+      // Step 5: Update AsyncStorage with new refresh token
       await AsyncStorage.setItem(REFRESH_TOKEN_KEY, res.data.refresh_token);
-      // Step 5: Update Redux with access token and user data
+      // Step 6: Update Redux with access token and user data
       dispatch(loginSuccess({
         token: res.data.access_token,
         refreshToken: res.data.refresh_token,
@@ -149,6 +183,22 @@ export default function AuthLoadingScreen() {
       }, 500);
     }
   };
+
+  useEffect(() => {
+    logoScale.value = withRepeat(
+      withSequence(
+        withTiming(1.12, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.94, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      false,
+    );
+    checkAuthStatus();
+  }, []);
+
+  const logoStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: logoScale.value }],
+  }));
 
   if (status === 'error') {
     return (

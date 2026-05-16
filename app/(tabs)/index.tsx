@@ -23,12 +23,11 @@ import {
   BellIcon,
   PlusCircleIcon,
   ClockIcon,
-  CheckCircleIcon,
-  CurrencyDollarIcon,
   ChartBarIcon,
   BuildingStorefrontIcon,
   ClipboardDocumentListIcon,
   BanknotesIcon,
+  CalendarDaysIcon,
 } from 'react-native-heroicons/outline';
 
 export default function DashboardScreen() {
@@ -242,21 +241,18 @@ export default function DashboardScreen() {
               <Text className="text-gray-500 mt-2">Loading dashboard...</Text>
             </View>
           ) : dashboardData ? (
-            <View className="flex-row flex-wrap -mx-2">
+            <View className="flex-row -mx-2">
               <StatCard
                 icon={<ClockIcon size={24} color="#F59E0B" />}
-                label="Pending"
+                label="Requests"
                 value={dashboardData.stats.pending_bookings.toString()}
+                subtitle="Pending"
               />
               <StatCard
-                icon={<ChartBarIcon size={24} color="#10B981" />}
-                label="Active"
-                value={dashboardData.stats.active_bookings.toString()}
-              />
-              <StatCard
-                icon={<CheckCircleIcon size={24} color="#2DA9E9" />}
-                label="Accepted"
-                value={dashboardData.stats.accepted_bookings.toString()}
+                icon={<CalendarDaysIcon size={24} color="#2DA9E9" />}
+                label="Bookings"
+                value={(dashboardData.stats.accepted_bookings + dashboardData.stats.active_bookings).toString()}
+                subtitle="Active"
               />
             </View>
           ) : (
@@ -271,7 +267,7 @@ export default function DashboardScreen() {
         <View className="px-6 mt-6">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-lg font-bold text-gray-900 dark:text-white">
-              Recent Bookings
+              Today's Schedule
             </Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')}>
               <Text className="text-primary-500 font-semibold text-sm">View All</Text>
@@ -329,7 +325,8 @@ export default function DashboardScreen() {
             ))
           ) : (
             <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
-              <Text className="text-gray-500">No recent bookings</Text>
+              <CalendarDaysIcon size={32} color="#9CA3AF" />
+              <Text className="text-gray-500 mt-2">No bookings today</Text>
             </View>
           )}
         </View>
@@ -344,8 +341,12 @@ export default function DashboardScreen() {
           <View className="flex-row flex-wrap -mx-2">
             <QuickLinkCard
               icon={<BuildingStorefrontIcon size={24} color="#F57C1F" />}
-              label="My Businesses"
-              onPress={() => router.push('/(business)/list')}
+              label={businessCount === 1 ? 'My Business' : 'My Businesses'}
+              onPress={() =>
+                businessCount === 1
+                  ? router.push(`/(business)/${activeBusinessId}/profile`)
+                  : router.push('/(business)/list')
+              }
             />
             <QuickLinkCard
               icon={<ClipboardDocumentListIcon size={24} color="#F57C1F" />}
@@ -375,23 +376,26 @@ function StatCard({
   icon,
   label,
   value,
-  isLarge = false,
+  subtitle,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
-  isLarge?: boolean;
+  subtitle?: string;
 }) {
   return (
-    <View className={`${isLarge ? 'w-full' : 'w-1/2'} p-2`}>
+    <View className="w-1/2 p-2">
       <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 shadow-sm">
         <View className="flex-row items-center mb-2">
           {icon}
-          <Text className="text-gray-500 text-xs ml-2 flex-1">{label}</Text>
+          <Text className="text-gray-700 dark:text-gray-300 text-sm font-semibold ml-2 flex-1">{label}</Text>
         </View>
-        <Text className="text-2xl font-bold text-gray-900 dark:text-white">
+        <Text className="text-3xl font-bold text-gray-900 dark:text-white">
           {value}
         </Text>
+        {subtitle && (
+          <Text className="text-xs text-gray-400 mt-1">{subtitle}</Text>
+        )}
       </View>
     </View>
   );
