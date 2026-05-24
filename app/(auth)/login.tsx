@@ -12,7 +12,6 @@ import { useDispatch } from 'react-redux';
 import { loginStart, loginSuccess, loginFailure } from '@/src/store/slices/authSlice';
 import { setUser } from '@/src/store/slices/userSlice';
 import { REFRESH_TOKEN_KEY } from '@/src/utils/refreshTokenStorage';
-import { registerDeviceToken } from '@/src/utils/pushNotifications';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -105,7 +104,6 @@ export default function LoginScreen() {
           providerBusinesses: res.data.provider_businesses || [],
           providerTier: res.data.user.provider_tier === 'pro' ? 'pro' : 'free',
         }));
-        registerDeviceToken(res.data.access_token); // fire-and-forget
         dispatch(setUser({
           id: res.data.user.id,
           fullName: res.data.user.full_name,

@@ -6,6 +6,10 @@ import { setOffline, setOnline } from '../store/slices/networkSlice';
 const api = axios.create({
   baseURL: config.domain_url,
   timeout: 15_000,
+   headers: {
+    'Content-Type': 'application/json',
+    'X-Platform': 'provider',
+  },
 });
 
 console.log('API Base URL:', config.domain_url);
@@ -25,11 +29,6 @@ api.interceptors.request.use(
     const authtoken = state.auth.token;
     if (authtoken) {
       cfg.headers.Authorization = `Bearer ${authtoken}`;
-    }
-
-    const installationId = state.auth.installationId;
-    if (installationId) {
-      cfg.headers['X-Installation-ID'] = installationId;
     }
 
     return cfg;
