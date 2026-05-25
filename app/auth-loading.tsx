@@ -5,9 +5,10 @@ import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
-import { loginSuccess, loginFailure } from '@/src/store/slices/authSlice';
+import { loginSuccess, loginFailure, setInstallationId } from '@/src/store/slices/authSlice';
 import { setUser } from '@/src/store/slices/userSlice';
 import { REFRESH_TOKEN_KEY } from '@/src/utils/refreshTokenStorage';
+import { ensureInstallationId, sendInstallationHeartbeat } from '@/src/utils/installation';
 
 import Animated, {
   useSharedValue,
@@ -50,7 +51,13 @@ export default function AuthLoadingScreen() {
   const checkAuthStatus = async () => {
     setStatus('loading');
     try {
-      // Step 1: Check if user has seen onboarding
+      // Step 1: Ensure the installation is registered before auth checks.
+      const installationId = await ensureInstallationId();
+      if (installationId) {
+        dispatch(setInstallationId(installationId));
+      }
+
+      // Step 2: Check if user has seen onboarding
       const hasSeenOnboarding = await AsyncStorage.getItem(ONBOARDING_KEY);
       if (!hasSeenOnboarding) {
         // First time user - show onboarding
@@ -60,7 +67,7 @@ export default function AuthLoadingScreen() {
         return;
       }
 
-      // Step 2: Check for refresh token
+      // Step 3: Check for refresh token
       const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
       if (!refreshToken) {
         setTimeout(() => {
@@ -109,6 +116,10 @@ export default function AuthLoadingScreen() {
         isPhoneVerified: res.data.user.phone_verified,
         createdAt: res.data.user.created_at,
       }));
+
+      if (installationId) {
+        void sendInstallationHeartbeat(installationId);
+      }
 
       setTimeout(() => {
         router.replace('/(tabs)');

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { config } from './apiConfig';
 import { RootState, store } from '../store';
 import { setOffline, setOnline } from '../store/slices/networkSlice';
@@ -31,6 +31,11 @@ api.interceptors.request.use(
       cfg.headers.Authorization = `Bearer ${authtoken}`;
     }
 
+    const installationId = state.auth.installationId;
+    if (installationId) {
+      cfg.headers['X-Installation-ID'] = installationId;
+    }
+
     return cfg;
   },
   (error) => Promise.reject(error),
@@ -58,19 +63,22 @@ api.interceptors.response.use(
 
 export const apiRequests = {
   get: (url: string, params?: any) => api.get(url, { params }),
-  post: (url: string, data?: any) => api.post(url, data),
-  put: (url: string, data?: any) => api.put(url, data),
-  patch: (url: string, data?: any) => api.patch(url, data),
-  delete: (url: string, data?: any) => api.delete(url, data),
+  post: (url: string, data?: any, config?: AxiosRequestConfig) => api.post(url, data, config),
+  put: (url: string, data?: any, config?: AxiosRequestConfig) => api.put(url, data, config),
+  patch: (url: string, data?: any, config?: AxiosRequestConfig) => api.patch(url, data, config),
+  delete: (url: string, config?: AxiosRequestConfig) => api.delete(url, config),
 };
 
 /**
- * POST /auth/logout — fire-and-forget; resolves even if the server call fails
+ * POST /provider/logout — fire-and-forget; resolves even if the server call fails
  * so the client state is always cleared regardless.
  */
 export const callLogoutApi = async (): Promise<void> => {
   try {
-    await api.post('/auth/logout');
+    const installation_id = store.getState().auth.installationId;
+    await api.post(`/installations/${installation_id}/logout`);
+    await api.post('/provider/logout');
+
   } catch {
     // Ignore — we clear local state either way
   }

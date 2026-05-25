@@ -510,26 +510,6 @@ export default function BusinessProfileScreen() {
                 )}
               </View>
 
-              {/* Categories shortcut */}
-              <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-gray-200 dark:border-[#334155] flex-row items-center">
-                <View className="w-12 h-12 bg-orange-50 dark:bg-orange-900/20 rounded-full items-center justify-center mr-4">
-                  <TagIcon size={24} color="#F57C1F" />
-                </View>
-                <View className="flex-1">
-                  <Text className="font-bold text-base text-gray-900 dark:text-white">Categories</Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">
-                    {business.categories_count} active {business.categories_count === 1 ? 'category' : 'categories'}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => router.push(`/(business)/${businessId}/categories`)}
-                  className="px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 rounded-lg"
-                >
-                  <Text className="text-orange-600 dark:text-orange-400 text-xs font-semibold">
-                    Manage
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </View>
           )}
 

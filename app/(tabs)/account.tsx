@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Image, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,14 +13,12 @@ import {
   UserCircleIcon,
   BuildingStorefrontIcon,
   Cog6ToothIcon,
-  BellIcon,
-  QuestionMarkCircleIcon,
-  ArrowRightOnRectangleIcon,
   ChevronRightIcon,
   PencilIcon,
   ArrowsRightLeftIcon,
   SparklesIcon,
   CheckBadgeIcon,
+  ArrowRightOnRectangleIcon,
 } from 'react-native-heroicons/outline';
 
 export default function AccountScreen() {
@@ -161,65 +159,52 @@ export default function AccountScreen() {
             />
           </View>
 
-          {/* Account Settings */}
+          {/* Preferences */}
           <Text className="text-xs font-bold mb-3 text-gray-500 dark:text-gray-400 uppercase">
-            Account Settings
+            Preferences
           </Text>
           <View className="bg-white dark:bg-[#1E293B] rounded-2xl mb-6 shadow-sm overflow-hidden">
-            <MenuItem
+            {/* <MenuItem
               icon={<UserCircleIcon size={24} color="#F57C1F" />}
-              title="Edit Profile"
-              subtitle="Update your personal information"
+              title="Account Settings"
+              subtitle="Edit profile and change password"
               onPress={() => router.push('/(settings)/profile')}
-            />
-            <Divider />
-            <MenuItem
-              icon={<BellIcon size={24} color="#F57C1F" />}
-              title="Notifications"
-              subtitle="Manage notification preferences"
-              onPress={() => router.push('/(settings)/notifications')}
-            />
-            <Divider />
-            <MenuItem
+            /> */}
+            {/* <Divider /> */}
+            {/* <MenuItem
               icon={<Cog6ToothIcon size={24} color="#F57C1F" />}
               title="App Settings"
-              subtitle="General app preferences"
+              subtitle="Change theme appearance"
               onPress={() => router.push('/(settings)')}
               showBorder={false}
-            />
-          </View>
-
-          {/* Support */}
-          <Text className="text-xs font-bold mb-3 text-gray-500 dark:text-gray-400 uppercase">
-            Support & Legal
-          </Text>
-          <View className="bg-white dark:bg-[#1E293B] rounded-2xl mb-6 shadow-sm overflow-hidden">
-            <MenuItem
-              icon={<QuestionMarkCircleIcon size={24} color="#F57C1F" />}
-              title="Help & Support"
-              subtitle="Chat with our AI assistant"
-              onPress={() => router.push('/(settings)/help')}
-              showBorder={false}
-            />
+            /> */}
           </View>
 
           {/* Logout */}
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 mb-8 shadow-sm flex-row items-center"
-          >
-            <View className="w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-full items-center justify-center mr-4">
-              <ArrowRightOnRectangleIcon size={24} color="#EF4444" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-red-500 font-bold text-base">Logout</Text>
-              <Text className="text-xs text-gray-500">
-                Sign out of your account
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <View className="bg-white dark:bg-[#1E293B] rounded-2xl mb-6 shadow-sm overflow-hidden">
+            <MenuItem
+              icon={<ArrowRightOnRectangleIcon size={24} color="#EF4444" />}
+              title="Logout"
+              onPress={handleLogout}
+              showBorder={false}
+            />
+          </View>
 
-          {/* App Version */}
+          <View className="mb-6 px-1">
+            <TouchableOpacity
+              onPress={() => Linking.openURL('https://play.google.com/store/apps/details?id=com.lookerservice.clientapp&pcampaignid=web_share')}
+              className="bg-sky-100 dark:bg-slate-700 rounded-2xl p-4"
+              activeOpacity={0.8}
+            >
+              <Text className="font-semibold text-slate-900 dark:text-white text-base">
+                Get the client app. LookerService
+              </Text>
+              <Text className="text-sm text-slate-600 dark:text-slate-300 mt-2">
+                Open the LookerService client app on Google Play.
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <Text className="text-center text-xs mb-8 text-gray-400 dark:text-gray-500">
             LookerService Provider v1.0.0
           </Text>
@@ -239,7 +224,7 @@ function MenuItem({
 }: {
   icon: React.ReactNode;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   onPress: () => void;
   showBorder?: boolean;
 }) {
@@ -256,9 +241,11 @@ function MenuItem({
         <Text className="font-bold text-base mb-0.5 text-gray-900 dark:text-white">
           {title}
         </Text>
-        <Text className="text-xs text-gray-500">
-          {subtitle}
-        </Text>
+        {subtitle ? (
+          <Text className="text-xs text-gray-500">
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       <ChevronRightIcon size={20} color="#9CA3AF" />
     </TouchableOpacity>

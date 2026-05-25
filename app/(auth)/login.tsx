@@ -8,10 +8,13 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useDispatch } from 'react-redux';
-import { loginStart, loginSuccess, loginFailure } from '@/src/store/slices/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { loginStart, loginSuccess, loginFailure, setInstallationId } from '@/src/store/slices/authSlice';
 import { setUser } from '@/src/store/slices/userSlice';
 import { REFRESH_TOKEN_KEY } from '@/src/utils/refreshTokenStorage';
+import { ensureInstallationId, sendInstallationHeartbeat } from '@/src/utils/installation';
+import { registerInstallationPushToken } from '@/src/utils/pushNotifications';
+import { RootState } from '@/src/store';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -56,6 +59,8 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const installationId = useSelector((state: RootState) => state.auth.installationId);
+
   const handleLogin = async () => {
     setErrorMessage('');
     if (activeTab === 'email') {
@@ -88,6 +93,14 @@ export default function LoginScreen() {
     dispatch(loginStart());
     setIsLoading(true);
     try {
+      let currentInstallationId = installationId;
+      if (!currentInstallationId) {
+        currentInstallationId = await ensureInstallationId();
+        if (currentInstallationId) {
+          dispatch(setInstallationId(currentInstallationId));
+        }
+      }
+
       const response = await apiRequests.post('/auth/login', {
         email,
         phone,
@@ -101,6 +114,7 @@ export default function LoginScreen() {
         dispatch(loginSuccess({
           token: res.data.access_token,
           refreshToken: res.data.refresh_token,
+          installationId: currentInstallationId ?? undefined,
           providerBusinesses: res.data.provider_businesses || [],
           providerTier: res.data.user.provider_tier === 'pro' ? 'pro' : 'free',
         }));
@@ -114,6 +128,12 @@ export default function LoginScreen() {
           isPhoneVerified: res.data.user.phone_verified,
           createdAt: res.data.user.created_at,
         }));
+
+        if (currentInstallationId) {
+          void registerInstallationPushToken(currentInstallationId);
+          void sendInstallationHeartbeat(currentInstallationId);
+        }
+
         // Redirect to dashboard
         router.replace('/(tabs)');
       } else {

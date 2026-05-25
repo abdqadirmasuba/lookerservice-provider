@@ -38,7 +38,7 @@ import {
   resetBusinessRegistration,
   DayHoursState,
 } from '@/src/store/slices/businessRegistrationSlice';
-import { loginSuccess } from '@/src/store/slices/authSlice';
+import { addProviderBusiness, loginSuccess } from '@/src/store/slices/authSlice';
 import { setUser } from '@/src/store/slices/userSlice';
 
 const TOTAL_STEPS = 4;
@@ -190,7 +190,20 @@ export default function BusinessStep4Screen() {
         ...(logoUrl && { logo_url: logoUrl }),
       };
 
-      await registerBusiness(payload);
+      const registerResponse = await registerBusiness(payload);
+      const registeredBusiness = registerResponse?.data;
+      if (registeredBusiness?.id) {
+        dispatch(addProviderBusiness({
+          id: registeredBusiness.id,
+          business_name: registeredBusiness.business_name,
+          address: registeredBusiness.address,
+          logo_url: registeredBusiness.logo_url,
+          verification_status: registeredBusiness.verification_status ?? registeredBusiness.status,
+          status: registeredBusiness.verification_status ?? registeredBusiness.status,
+          provider_type: registeredBusiness.provider_type,
+          created_at: registeredBusiness.created_at,
+        }));
+      }
       dispatch(resetBusinessRegistration());
 
       Alert.alert(

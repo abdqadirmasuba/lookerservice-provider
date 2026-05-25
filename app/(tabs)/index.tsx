@@ -199,6 +199,13 @@ export default function DashboardScreen() {
                     <Text className="text-gray-500 text-xs mt-0.5">
                       {activeBusiness.address || 'Address not set'}
                     </Text>
+                    {(activeBusiness.verification_status || activeBusiness.status) && (
+                      <View className="mt-2 flex-row items-center rounded-full px-3 py-1" style={{ backgroundColor: activeBusiness.verification_status === 'pending' ? '#F59E0B20' : '#E5E7EB' }}>
+                        <Text className="text-[11px] font-semibold" style={{ color: activeBusiness.verification_status === 'pending' ? '#B45309' : '#374151' }}>
+                          {(activeBusiness.verification_status || activeBusiness.status)?.replace(/_/g, ' ')}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   {providerTier === 'pro' && businessCount > 1 && (
                     <TouchableOpacity
@@ -352,16 +359,6 @@ export default function DashboardScreen() {
               icon={<ClipboardDocumentListIcon size={24} color="#F57C1F" />}
               label="Bids"
               onPress={() => router.push('/(bids)')}
-            />
-            <QuickLinkCard
-              icon={<BanknotesIcon size={24} color="#F57C1F" />}
-              label="Transactions"
-              onPress={() => router.push('/(earnings)')}
-            />
-            <QuickLinkCard
-              icon={<ChartBarIcon size={24} color="#F57C1F" />}
-              label="Analytics"
-              onPress={() => router.push(`/(business)/${activeBusinessId}/analytics`)}
             />
           </View>
         </View>

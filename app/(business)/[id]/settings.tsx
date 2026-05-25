@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeftIcon,
+  BellIcon,
   ClockIcon,
   TagIcon,
   PencilIcon,
@@ -215,6 +216,25 @@ export default function BusinessSettingsScreen() {
                 </Text>
                 <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   Set your weekly availability schedule
+                </Text>
+              </View>
+              <ChevronRightIcon size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push(`/(settings)/notifications` as any)}
+              className="flex-row items-center py-4 border-b border-gray-100 dark:border-[#334155]"
+              activeOpacity={0.7}
+            >
+              <View className="w-10 h-10 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl items-center justify-center mr-4">
+                <BellIcon size={20} color="#F59E0B" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                  Notifications
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Configure push and alert preferences for this business
                 </Text>
               </View>
               <ChevronRightIcon size={20} color="#9CA3AF" />

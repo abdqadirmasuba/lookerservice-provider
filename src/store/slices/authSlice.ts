@@ -7,6 +7,10 @@ export interface ProviderBusiness {
   is_last_accessed?: boolean;
   logo_url?: string;
   address?: string;
+  verification_status?: string;
+  status?: string;
+  provider_type?: string;
+  created_at?: string;
 }
 
 interface AuthState {
@@ -14,6 +18,7 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   tempToken: string | null;
+  installationId: string | null;
   providerBusinesses: ProviderBusiness[];
   activeBusinessId: string | null;
   providerTier: 'free' | 'pro';
@@ -26,6 +31,7 @@ const initialState: AuthState = {
   token: null,
   refreshToken: null,
   tempToken: null,
+  installationId: null,
   providerBusinesses: [],
   activeBusinessId: null,
   providerTier: 'free',
@@ -41,10 +47,13 @@ const authSlice = createSlice({
       state.isLoading = true;
       state.error = null;
     },
-    loginSuccess: (state, action: PayloadAction<{ token: string; refreshToken: string; providerBusinesses?: ProviderBusiness[]; providerTier?: 'free' | 'pro' }>) => {
+    loginSuccess: (state, action: PayloadAction<{ token: string; refreshToken: string; installationId?: string; providerBusinesses?: ProviderBusiness[]; providerTier?: 'free' | 'pro' }>) => {
       state.isAuthenticated = true;
       state.token = action.payload.token;
       state.refreshToken = action.payload.refreshToken;
+      if (action.payload.installationId) {
+        state.installationId = action.payload.installationId;
+      }
       state.providerTier = action.payload.providerTier ?? 'free';
       if (action.payload.providerBusinesses) {
         state.providerBusinesses = action.payload.providerBusinesses;
@@ -77,8 +86,20 @@ const authSlice = createSlice({
     setTempToken: (state, action: PayloadAction<string | null>) => {
       state.tempToken = action.payload;
     },
+    setInstallationId: (state, action: PayloadAction<string>) => {
+      state.installationId = action.payload;
+    },
+    addProviderBusiness: (state, action: PayloadAction<ProviderBusiness>) => {
+      const exists = state.providerBusinesses.some((b) => b.id === action.payload.id);
+      if (!exists) {
+        state.providerBusinesses.unshift(action.payload);
+      }
+      if (!state.activeBusinessId) {
+        state.activeBusinessId = action.payload.id;
+      }
+    },
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, updateToken, setActiveBusiness, setTempToken } = authSlice.actions;
+export const { loginStart,addProviderBusiness, loginSuccess, loginFailure, logout, updateToken, setActiveBusiness, setTempToken, setInstallationId } = authSlice.actions;
 export default authSlice.reducer;
