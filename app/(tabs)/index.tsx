@@ -322,9 +322,11 @@ export default function DashboardScreen() {
                       <Text className="text-xs text-gray-500">
                         {booking.booking_number}
                       </Text>
-                      <Text className="text-sm font-semibold text-primary-500">
-                        {formatCurrency(booking.agreed_amount)}
-                      </Text>
+                      {booking.agreed_amount && (
+                        <Text className="text-sm font-semibold text-primary-500">
+                          {formatCurrency(booking.agreed_amount)}
+                        </Text>
+                      )}
                     </View>
                   </View>
                 </View>

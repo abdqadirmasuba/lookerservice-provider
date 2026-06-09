@@ -164,20 +164,12 @@ export default function AccountScreen() {
             Preferences
           </Text>
           <View className="bg-white dark:bg-[#1E293B] rounded-2xl mb-6 shadow-sm overflow-hidden">
-            {/* <MenuItem
-              icon={<UserCircleIcon size={24} color="#F57C1F" />}
-              title="Account Settings"
-              subtitle="Edit profile and change password"
-              onPress={() => router.push('/(settings)/profile')}
-            /> */}
-            {/* <Divider /> */}
-            {/* <MenuItem
-              icon={<Cog6ToothIcon size={24} color="#F57C1F" />}
-              title="App Settings"
-              subtitle="Change theme appearance"
-              onPress={() => router.push('/(settings)')}
-              showBorder={false}
-            /> */}
+            <MenuItem
+              icon={<SparklesIcon size={24} color="#F57C1F" />}
+              title="Support LookerServices"
+              subtitle="Create a payment link for Pesapal"
+              onPress={() => router.push('/(support)')}
+            />
           </View>
 
           {/* Logout */}
