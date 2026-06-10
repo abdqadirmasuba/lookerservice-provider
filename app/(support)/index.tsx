@@ -6,11 +6,12 @@ import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
 import { createPayment, createSupportPaymentCallbackUrl } from '@/src/utils/payments';
 import ArrowLeftIcon from 'react-native-heroicons/outline/ArrowLeftIcon';
+import KeyboardAvoidingWrapper from '@/src/components/common/KeyboardAvoidingWrapper';
 
 export default function SupportPaymentScreen() {
   const router = useRouter();
-  const [amount, setAmount] = useState('1000');
-  const [phoneNumber, setPhoneNumber] = useState('0771210855');
+  const [amount, setAmount] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -55,16 +56,16 @@ export default function SupportPaymentScreen() {
           <Text className="text-xl font-bold text-gray-900 dark:text-white">
             Support Looker Service
           </Text>
-        </View>        
+        </View>
       </View>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+      <KeyboardAvoidingWrapper>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
           <View className="px-6 pt-6">
-             <Text className="text-sm text-gray-500 dark:text-gray-400 mt-3 leading-6">
-              Give support to LookerService to help its services grow and reach wider coverage. Your contribution supports provider support for LookerService and helps keep the platform running for everyone.
+            <Text className="text-sm text-gray-500 dark:text-gray-400 mt-3 leading-6">
+              Give support to Looker Service to help its services grow and reach wider coverage. Your contribution Means alot in support for Looker Service platform to keep running .
             </Text>
             <Text className="text-sm text-gray-500 dark:text-gray-400 mt-3 leading-6">
-              Payments are processed by Pesapal and support Mobile Money and card payments. Enter the amount and phone number below to create the payment link.
+              Payments are processed by Pesapal and support Mobile Money and card payments. Enter the amount and phone number below to create the payment.
             </Text>
 
             <View className="mt-8 bg-white dark:bg-[#1E293B] rounded-3xl p-5 shadow-sm">
@@ -78,7 +79,7 @@ export default function SupportPaymentScreen() {
                     value={amount}
                     onChangeText={setAmount}
                     keyboardType="numeric"
-                    placeholder="1000"
+                    placeholder="amount in UGX"
                     placeholderTextColor="#94A3B8"
                     className="flex-1 text-base text-slate-900 dark:text-white"
                   />
@@ -86,12 +87,12 @@ export default function SupportPaymentScreen() {
               </View>
 
               <View className="mt-5">
-                <Text className="text-sm font-semibold text-slate-800 dark:text-white">Phone Number</Text>
+                <Text className="text-sm font-semibold text-slate-800 dark:text-white">Mobile Account Number</Text>
                 <TextInput
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
-                  placeholder="0771210855"
+                  placeholder="07....."
                   placeholderTextColor="#94A3B8"
                   className="mt-2 rounded-2xl border border-gray-200 dark:border-[#334155] bg-gray-50 dark:bg-[#111827] px-4 py-3 text-base text-slate-900 dark:text-white"
                 />
@@ -112,7 +113,7 @@ export default function SupportPaymentScreen() {
             </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingWrapper>
     </SafeAreaView>
   );
 }

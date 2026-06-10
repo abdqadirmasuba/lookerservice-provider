@@ -507,7 +507,7 @@ export default function ViewServiceScreen() {
                   Item Name / Label <Text className="text-primary-500">*</Text>
                 </Text>
                 <TextInput
-                  placeholder="e.g. Basic Wash, Deep Clean…"
+                  placeholder=""
                   placeholderTextColor="#9CA3AF"
                   value={formLabel}
                   onChangeText={setFormLabel}
@@ -523,7 +523,7 @@ export default function ViewServiceScreen() {
                   <Text className="text-gray-400 font-normal">(Optional)</Text>
                 </Text>
                 <TextInput
-                  placeholder="e.g. 25000"
+                  placeholder="amount"
                   placeholderTextColor="#9CA3AF"
                   value={formPrice}
                   onChangeText={setFormPrice}

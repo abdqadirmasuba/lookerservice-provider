@@ -40,7 +40,7 @@ export default function OfflineToast() {
       <View style={styles.card}>
         <WifiIcon size={16} color="#fff" strokeWidth={2.5} />
         <Text style={styles.text}>
-          No internet connection — please reconnect to continue
+          Internet connection appears to be offline. Please check your connection.
         </Text>
       </View>
     </Animated.View>

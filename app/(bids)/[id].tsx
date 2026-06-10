@@ -31,7 +31,7 @@ const OPEN_REQUESTS: Record<string, any> = {
   '1': {
     id: '1',
     request_number: 'SR-20260001',
-    client_name: 'John Doe',
+    client_name: 'Name',
     address: 'Nakawa, Kampala',
     budget_min: 100000,
     budget_max: 300000,

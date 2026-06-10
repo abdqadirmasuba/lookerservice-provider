@@ -20,7 +20,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   EnvelopeIcon,
-  PhoneIcon,
   LockClosedIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -30,7 +29,6 @@ import {
 import KeyboardAvoidingWrapper from '@/src/components/common/KeyboardAvoidingWrapper';
 import {apiRequests} from '@/src/utils/apiRequest';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { detectCountry, validateInternationalPhone } from '@/src/utils/countryCodeUtils';
 
 function SplashLogo() {
   return (
@@ -44,17 +42,18 @@ function SplashLogo() {
   );
 }
 
-type TabType = 'email' | 'phone';
+// Commented out: email/phone toggle support
+// type TabType = 'email' | 'phone';
 
 export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
   const params = useLocalSearchParams();
   const successMessage = (params.successMessage as string) || '';
-  const [activeTab, setActiveTab] = useState<TabType>('email');
+  // const [activeTab, setActiveTab] = useState<TabType>('email');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('+');
+  // const [phone, setPhone] = useState('+');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -63,32 +62,31 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     setErrorMessage('');
-    if (activeTab === 'email') {
-      if (!email.trim()) {
-        setErrorMessage('Please enter your email address');
-        return;
-      }
-      if (!password) {
-        setErrorMessage('Please enter your password');
-        return;
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setErrorMessage('Please enter a valid email address');
-        return;
-      }
+    if (!email.trim()) {
+      setErrorMessage('Please enter your email address');
+      return;
     }
-    if (activeTab === 'phone') {
-      const phoneErr = validateInternationalPhone(phone.trim());
-      if (phoneErr) {
-        setErrorMessage(phoneErr);
-        return;
-      }
-      if (!password) {
-        setErrorMessage('Please enter your password');
-        return;
-      }
+    if (!password) {
+      setErrorMessage('Please enter your password');
+      return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setErrorMessage('Please enter a valid email address');
+      return;
+    }
+    // Phone login is temporarily disabled.
+    // if (activeTab === 'phone') {
+    //   const phoneErr = validateInternationalPhone(phone.trim());
+    //   if (phoneErr) {
+    //     setErrorMessage(phoneErr);
+    //     return;
+    //   }
+    //   if (!password) {
+    //     setErrorMessage('Please enter your password');
+    //     return;
+    //   }
+    // }
 
     dispatch(loginStart());
     setIsLoading(true);
@@ -103,7 +101,7 @@ export default function LoginScreen() {
 
       const response = await apiRequests.post('/auth/login', {
         email,
-        phone,
+        // phone,
         password,
       });
       const res = response.data;
@@ -194,7 +192,7 @@ export default function LoginScreen() {
               </View>
             )}
 
-            {/* Tab Toggle */}
+            {/* Phone/email toggle temporarily disabled
             <View className="flex-row bg-gray-100 dark:bg-[#0F172A] rounded-full p-1 mb-6">
               <TouchableOpacity
                 onPress={() => { setActiveTab('email'); setErrorMessage(''); }}
@@ -224,32 +222,28 @@ export default function LoginScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+            */}
 
-            {/* Email Tab */}
-            {activeTab === 'email' && (
-              <View>
-                <View className="mb-4">
-                  <Text className="mb-2 font-medium text-gray-700 dark:text-gray-300">
-                    Email Address
-                  </Text>
-                  <View className="flex-row items-center bg-gray-50 dark:bg-[#0F172A] border border-gray-200 dark:border-[#334155] rounded-xl px-4">
-                    <EnvelopeIcon size={20} color="#6B7280" />
-                    <TextInput
-                      placeholder="your@email.com"
-                      placeholderTextColor="#6B7280"
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      returnKeyType="next"
-                      className="flex-1 py-4 ml-3 text-gray-900 dark:text-white"
-                    />
-                  </View>
-                </View>
+            <View className="mb-4">
+              <Text className="mb-2 font-medium text-gray-700 dark:text-gray-300">
+                Email Address
+              </Text>
+              <View className="flex-row items-center bg-gray-50 dark:bg-[#0F172A] border border-gray-200 dark:border-[#334155] rounded-xl px-4">
+                <EnvelopeIcon size={20} color="#6B7280" />
+                <TextInput
+                  placeholder="your@email.com"
+                  placeholderTextColor="#6B7280"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  returnKeyType="next"
+                  className="flex-1 py-4 ml-3 text-gray-900 dark:text-white"
+                />
               </View>
-            )}
+            </View>
 
-            {/* Phone Tab */}
+            {/* Phone login field temporarily disabled
             {activeTab === 'phone' && (
               <View>
                 <View className="mb-4">
@@ -265,7 +259,6 @@ export default function LoginScreen() {
                       placeholderTextColor="#6B7280"
                       value={phone}
                       onChangeText={(t) => {
-                        // Always keep leading '+'
                         if (!t.startsWith('+')) setPhone('+' + t.replace(/[^0-9]/g, ''));
                         else setPhone('+' + t.slice(1).replace(/[^0-9]/g, ''));
                       }}
@@ -286,6 +279,7 @@ export default function LoginScreen() {
                 </View>
               </View>
             )}
+            */}
 
             {/* Password Input */}
             <View className="mb-4">

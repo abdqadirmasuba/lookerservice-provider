@@ -252,7 +252,7 @@ export default function DashboardScreen() {
               <StatCard
                 icon={<ClockIcon size={24} color="#F59E0B" />}
                 label="Requests"
-                value={dashboardData.stats.pending_bookings.toString()}
+                value={dashboardData.stats.service_requests.toString()}
                 subtitle="Pending"
               />
               <StatCard

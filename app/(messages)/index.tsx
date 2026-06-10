@@ -8,7 +8,7 @@ import { ArrowLeftIcon, MagnifyingGlassIcon, ChatBubbleLeftEllipsisIcon } from '
 const CONVERSATIONS = [
   {
     id: '1',
-    name: 'John Doe',
+    name: 'Mukisa sam',
     lastMessage: 'Hi, I wanted to confirm the appointment for tomorrow.',
     time: '10:32 AM',
     unread: 2,

@@ -20,6 +20,7 @@ import {
   RectangleGroupIcon,
   ClockIcon,
   TruckIcon,
+  EnvelopeIcon,
   XMarkIcon,
   CameraIcon,
   PencilSquareIcon,
@@ -179,6 +180,7 @@ export default function BusinessStep4Screen() {
         business_description: reg.business_description,
         service_delivery_type: reg.service_delivery_type,
         provider_type: reg.provider_type,
+        contact_details: reg.contact_details,
         longitude: reg.longitude!,
         latitude: reg.latitude!,
         address: reg.address,
@@ -361,6 +363,32 @@ export default function BusinessStep4Screen() {
               <Text className="text-sm font-medium text-gray-900 dark:text-white">
                 {DELIVERY_LABELS[reg.service_delivery_type] || reg.service_delivery_type}
               </Text>
+            </>
+          )}
+
+          {sectionCard(
+            <>
+              {sectionHeader(<EnvelopeIcon size={18} color="#0891B2" />, 'Contact Details', 1)}
+              <View style={{ gap: 8 }}>
+                <View>
+                  <Text className="text-xs text-gray-400">Email</Text>
+                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {reg.contact_details?.email || 'Not provided'}
+                  </Text>
+                </View>
+                <View>
+                  <Text className="text-xs text-gray-400">Phone</Text>
+                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {reg.contact_details?.phone || 'Not provided'}
+                  </Text>
+                </View>
+                <View>
+                  <Text className="text-xs text-gray-400">WhatsApp</Text>
+                  <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {reg.contact_details?.whatsapp || 'Not provided'}
+                  </Text>
+                </View>
+              </View>
             </>
           )}
 

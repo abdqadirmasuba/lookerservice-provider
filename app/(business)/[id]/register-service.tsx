@@ -383,7 +383,7 @@ export default function RegisterServiceScreen() {
                 <Text className="text-primary-500">*</Text>
               </Text>
               <TextInput
-                placeholder="e.g. Basic Wash, Deep Clean, Suit Fitting…"
+                placeholder="a unit of service/package you provide"
                 placeholderTextColor="#9CA3AF"
                 value={formLabel}
                 onChangeText={setFormLabel}
@@ -399,7 +399,7 @@ export default function RegisterServiceScreen() {
                 <Text className="text-gray-400 font-normal">(Optional — leave empty if negotiable)</Text>
               </Text>
               <TextInput
-                placeholder="e.g. 25000"
+                placeholder="amount"
                 placeholderTextColor="#9CA3AF"
                 value={formPrice}
                 onChangeText={setFormPrice}

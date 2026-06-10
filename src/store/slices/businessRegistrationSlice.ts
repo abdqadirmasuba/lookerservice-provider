@@ -13,11 +13,16 @@ export interface DayHoursState {
 }
 
 export interface BusinessRegistrationState {
-  // Step 1: Business Info, Service Delivery & Location
+  // Step 1: Business Info, Service Delivery, Contact Details & Location
   business_name: string;
   business_description: string;
   service_delivery_type: ServiceDeliveryType;
   provider_type: ProviderType;
+  contact_details: {
+    email: string;
+    phone: string;
+    whatsapp: string;
+  };
   longitude: number | null;
   latitude: number | null;
   address: string;
@@ -47,6 +52,11 @@ const initialState: BusinessRegistrationState = {
   business_description: '',
   service_delivery_type: '',
   provider_type: '',
+  contact_details: {
+    email: '',
+    phone: '',
+    whatsapp: '',
+  },
   longitude: null,
   latitude: null,
   address: '',
@@ -106,6 +116,13 @@ const businessRegistrationSlice = createSlice({
       state.business_hours = action.payload;
     },
 
+    setContactDetails: (
+      state,
+      action: PayloadAction<{ email: string; phone: string; whatsapp: string }>
+    ) => {
+      state.contact_details = action.payload;
+    },
+
     setBusinessLogo: (state, action: PayloadAction<string>) => {
       state.business_logo = action.payload;
     },
@@ -159,7 +176,8 @@ export const {
   setCurrentStep,
   nextStep,
   previousStep,
-  resetBusinessRegistration,
+setContactDetails,
+    resetBusinessRegistration,
 } = businessRegistrationSlice.actions;
 
 export default businessRegistrationSlice.reducer;

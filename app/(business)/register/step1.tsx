@@ -22,6 +22,7 @@ import {
   MapPinIcon,
   TruckIcon,
   GlobeAltIcon,
+  EnvelopeIcon,
   CameraIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
@@ -36,6 +37,7 @@ import {
   setBusinessInfo,
   setLocation,
   setBusinessLogo,
+  setContactDetails,
   ServiceDeliveryType,
   ProviderType,
 } from '@/src/store/slices/businessRegistrationSlice';
@@ -123,6 +125,9 @@ export default function BusinessStep1Screen() {
   const [city, setCity] = useState(reg.city);
   const [stateRegion, setStateRegion] = useState(reg.state_region);
   const [country, setCountry] = useState(reg.country || 'Uganda');
+  const [contactEmail, setContactEmail] = useState(reg.contact_details?.email || '');
+  const [contactPhone, setContactPhone] = useState(reg.contact_details?.phone || '');
+  const [contactWhatsapp, setContactWhatsapp] = useState(reg.contact_details?.whatsapp || '');
   const [activeField, setActiveField] = useState<string | null>(null);
 
   const hasLocation = !!coords;
@@ -218,12 +223,27 @@ export default function BusinessStep1Screen() {
       return;
     }
 
+    if (!contactEmail.trim() && !contactPhone.trim() && !contactWhatsapp.trim()) {
+      Alert.alert(
+        'Required',
+        'Please provide at least one contact detail: email, phone, or WhatsApp.',
+      );
+      return;
+    }
+
     dispatch(
       setBusinessInfo({
         business_name: businessName,
         business_description: description,
         service_delivery_type: deliveryType,
         provider_type: providerType,
+      }),
+    );
+    dispatch(
+      setContactDetails({
+        email: contactEmail.trim(),
+        phone: contactPhone.trim(),
+        whatsapp: contactWhatsapp.trim(),
       }),
     );
     dispatch(
@@ -512,6 +532,74 @@ export default function BusinessStep1Screen() {
                   </TouchableOpacity>
                 );
               })}
+            </View>
+
+            {/* Contact Details */}
+            <View className="mb-7">
+              <View className="flex-row items-center mb-4">
+                <View className="flex-1 h-px bg-gray-200 dark:bg-[#334155]" />
+                <View className="flex-row items-center mx-3">
+                  <EnvelopeIcon size={12} color="#0891B2" />
+                  <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-1.5">
+                    Contact Details
+                  </Text>
+                </View>
+                <View className="flex-1 h-px bg-gray-200 dark:bg-[#334155]" />
+              </View>
+
+              <View style={{ gap: 14 }}>
+                <View>
+                  <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Email
+                  </Text>
+                  <TextInput
+                    placeholder="business@example.com"
+                    placeholderTextColor="#9CA3AF"
+                    value={contactEmail}
+                    onChangeText={setContactEmail}
+                    onFocus={() => setActiveField('contactEmail')}
+                    onBlur={() => setActiveField(null)}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    className="bg-white dark:bg-[#1E293B] rounded-xl px-4 text-gray-900 dark:text-white text-sm"
+                    style={{ borderWidth: 2, borderColor: borderColor('contactEmail'), paddingVertical: 12 }}
+                  />
+                </View>
+
+                <View>
+                  <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Phone
+                  </Text>
+                  <TextInput
+                    placeholder="e.g., +256 700 000000"
+                    placeholderTextColor="#9CA3AF"
+                    value={contactPhone}
+                    onChangeText={setContactPhone}
+                    onFocus={() => setActiveField('contactPhone')}
+                    onBlur={() => setActiveField(null)}
+                    keyboardType="phone-pad"
+                    className="bg-white dark:bg-[#1E293B] rounded-xl px-4 text-gray-900 dark:text-white text-sm"
+                    style={{ borderWidth: 2, borderColor: borderColor('contactPhone'), paddingVertical: 12 }}
+                  />
+                </View>
+
+                <View>
+                  <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    WhatsApp
+                  </Text>
+                  <TextInput
+                    placeholder="e.g., +256 700 000000"
+                    placeholderTextColor="#9CA3AF"
+                    value={contactWhatsapp}
+                    onChangeText={setContactWhatsapp}
+                    onFocus={() => setActiveField('contactWhatsapp')}
+                    onBlur={() => setActiveField(null)}
+                    keyboardType="phone-pad"
+                    className="bg-white dark:bg-[#1E293B] rounded-xl px-4 text-gray-900 dark:text-white text-sm"
+                    style={{ borderWidth: 2, borderColor: borderColor('contactWhatsapp'), paddingVertical: 12 }}
+                  />
+                </View>
+              </View>
             </View>
 
             {/* Separator: Location */}

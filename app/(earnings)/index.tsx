@@ -14,7 +14,7 @@ import {
 } from 'react-native-heroicons/outline';
 
 const TRANSACTIONS = [
-  { id: '1', client: 'John Doe', service: 'Plumbing Repair', amount: 320000, date: '2026-04-13', status: 'completed' },
+  { id: '1', client: 'mukisa sam', service: 'Plumbing Repair', amount: 320000, date: '2026-04-13', status: 'completed' },
   { id: '2', client: 'Sarah Kato', service: 'Electrical Wiring', amount: 580000, date: '2026-04-11', status: 'completed' },
   { id: '3', client: 'Moses Otieno', service: 'House Cleaning', amount: 120000, date: '2026-04-09', status: 'pending' },
   { id: '4', client: 'Grace Namuli', service: 'Interior Painting', amount: 450000, date: '2026-04-06', status: 'completed' },

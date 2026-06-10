@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   EnvelopeIcon,
-  PhoneIcon,
+  // PhoneIcon,
   LockClosedIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -32,7 +32,7 @@ import { apiRequests } from '@/src/utils/apiRequest';
 import KeyboardAvoidingWrapper from '@/src/components/common/KeyboardAvoidingWrapper';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { Linking } from 'react-native';
-import { detectCountry, validateInternationalPhone } from '@/src/utils/countryCodeUtils';
+// import { detectCountry, validateInternationalPhone } from '@/src/utils/countryCodeUtils';
 
 function SplashLogo() {
   return (
@@ -46,13 +46,14 @@ function SplashLogo() {
   );
 }
 
-type TabType = 'email' | 'phone';
+// Commented out: email/phone toggle support
+// type TabType = 'email' | 'phone';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { isDark, colors } = useTheme();
-  const [activeTab, setActiveTab] = useState<TabType>('email');
+  // const [activeTab, setActiveTab] = useState<TabType>('email');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -60,7 +61,7 @@ export default function RegisterScreen() {
   // Form states
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('+');
+  // const [phone, setPhone] = useState('+');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -107,18 +108,19 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (activeTab === 'email' && !email.trim()) {
+    if (!email.trim()) {
       setErrorMessage('Please enter your email address');
       return;
     }
 
-    if (activeTab === 'phone') {
-      const phoneErr = validateInternationalPhone(phone.trim());
-      if (phoneErr) {
-        setErrorMessage(phoneErr);
-        return;
-      }
-    }
+    // Phone registration is temporarily disabled.
+    // if (activeTab === 'phone') {
+    //   const phoneErr = validateInternationalPhone(phone.trim());
+    //   if (phoneErr) {
+    //     setErrorMessage(phoneErr);
+    //     return;
+    //   }
+    // }
 
     if (!password) {
       setErrorMessage('Please enter a password');
@@ -147,26 +149,29 @@ export default function RegisterScreen() {
         full_name: fullName,
         password,
         role: 'provider',
+        email: email.trim(),
       };
-      if (activeTab === 'email') {
-        payload.email = email.trim();
-      } else {
-        payload.phone = phone.trim();
-      }
+
+      // Old multi-channel payload logic:
+      // const payload: Record<string, string> = {
+      //   full_name: fullName,
+      //   password,
+      //   role: 'provider',
+      // };
+      // if (activeTab === 'email') {
+      //   payload.email = email.trim();
+      // } else {
+      //   payload.phone = phone.trim();
+      // }
 
       const response = await apiRequests.post('/auth/register', payload);
       const { data } = response;
 
       if (data?.success) {
-        const channel: string = data.data?.channel ?? activeTab;
-        const address: string = data.data?.address ?? (activeTab === 'email' ? email : `+256${phone}`);
+        const address: string = data.data?.address ?? email.trim();
         const token: string = data.data?.temp_token ?? '';
         dispatch(setTempToken(token));
-        if (channel === 'email') {
-          router.push({ pathname: '/(auth)/verify-email', params: { address } });
-        } else {
-          router.push({ pathname: '/(auth)/verify-phone', params: { address, channel } });
-        }
+        router.push({ pathname: '/(auth)/verify-email', params: { address } });
       } else {
         setErrorMessage(data?.message ?? 'Registration failed. Please try again.');
       }
@@ -231,7 +236,7 @@ export default function RegisterScreen() {
                 </View>
               )}
 
-              {/* Tab Toggle */}
+              {/* Tab Toggle temporarily disabled
               <View className={`flex-row ${isDark ? 'bg-dark-bg' : 'bg-gray-100'} rounded-full p-1 mb-6`}>
                 <TouchableOpacity
                   onPress={() => { setActiveTab('email'); setErrorMessage(''); }}
@@ -261,6 +266,7 @@ export default function RegisterScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
+              */}
 
               {/* Full Name */}
               <View className="mb-4">
@@ -270,7 +276,7 @@ export default function RegisterScreen() {
                 <View className={`flex-row items-center ${isDark ? 'bg-dark-bg border-dark-border' : 'bg-gray-50 border-gray-200'} border rounded-xl px-4`}>
                   <UserIcon size={20} color={colors.textSecondary} />
                   <TextInput
-                    placeholder="John Doe"
+                    placeholder="Your Name"
                     placeholderTextColor={colors.textSecondary}
                     value={fullName}
                     onChangeText={setFullName}
@@ -280,57 +286,43 @@ export default function RegisterScreen() {
                 </View>
               </View>
 
-              {/* Email/Phone */}
-              {activeTab === 'email' ? (
-                <View className="mb-4">
-                  <Text className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Email Address
-                  </Text>
-                  <View className={`flex-row items-center ${isDark ? 'bg-dark-bg border-dark-border' : 'bg-gray-50 border-gray-200'} border rounded-xl px-4`}>
-                    <EnvelopeIcon size={20} color={colors.textSecondary} />
-                    <TextInput
-                      placeholder="your@email.com"
-                      placeholderTextColor={colors.textSecondary}
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      className={`flex-1 py-4 ml-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
-                    />
-                  </View>
+              {/* Email/Phone section temporarily disabled
+              <View className="mb-4">
+                <Text className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Email Address
+                </Text>
+                <View className={`flex-row items-center ${isDark ? 'bg-dark-bg border-dark-border' : 'bg-gray-50 border-gray-200'} border rounded-xl px-4`}>
+                  <EnvelopeIcon size={20} color={colors.textSecondary} />
+                  <TextInput
+                    placeholder="your@email.com"
+                    placeholderTextColor={colors.textSecondary}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    className={`flex-1 py-4 ml-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                  />
                 </View>
-              ) : (
-                <View className="mb-4">
-                  <Text className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Phone Number
-                  </Text>
-                  <View className={`flex-row items-center ${isDark ? 'bg-dark-bg border-dark-border' : 'bg-gray-50 border-gray-200'} border rounded-xl px-4`}>
-                    <Text style={{ fontSize: 22 }}>
-                      {detectCountry(phone)?.flag ?? '🌍'}
-                    </Text>
-                    <TextInput
-                      placeholder="+256 701 234 567"
-                      placeholderTextColor={colors.textSecondary}
-                      value={phone}
-                      onChangeText={(t) => {
-                        if (!t.startsWith('+')) setPhone('+' + t.replace(/[^0-9]/g, ''));
-                        else setPhone('+' + t.slice(1).replace(/[^0-9]/g, ''));
-                      }}
-                      keyboardType="phone-pad"
-                      autoCorrect={false}
-                      className={`flex-1 py-4 ml-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
-                    />
-                  </View>
-                  {phone.length > 1 && (() => {
-                    const country = detectCountry(phone);
-                    return country ? (
-                      <Text className="text-xs text-green-600 mt-1 ml-1">{country.flag} {country.name} (+{country.code})</Text>
-                    ) : (
-                      <Text className="text-xs text-amber-600 mt-1 ml-1">Keep typing the country code…</Text>
-                    );
-                  })()}
+              </View>
+              */}
+
+              <View className="mb-4">
+                <Text className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Email Address
+                </Text>
+                <View className={`flex-row items-center ${isDark ? 'bg-dark-bg border-dark-border' : 'bg-gray-50 border-gray-200'} border rounded-xl px-4`}>
+                  <EnvelopeIcon size={20} color={colors.textSecondary} />
+                  <TextInput
+                    placeholder="your@email.com"
+                    placeholderTextColor={colors.textSecondary}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    className={`flex-1 py-4 ml-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                  />
                 </View>
-              )}
+              </View>
 
               {/* Password */}
               <View className="mb-4">
