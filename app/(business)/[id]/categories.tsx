@@ -56,6 +56,7 @@ export default function ManageCategoriesScreen() {
   const [providerCategories, setProviderCategories] = useState<ProviderCategory[]>([]);
   const [addingCategoryId, setAddingCategoryId] = useState<string | null>(null);
   const [confirmCategory, setConfirmCategory] = useState<AvailableCategory | null>(null);
+  const [showNextStepModal, setShowNextStepModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -216,6 +217,38 @@ export default function ManageCategoriesScreen() {
         )}
       </ScrollView>
 
+      {/* Next-step modal */}
+      <Modal
+        visible={showNextStepModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNextStepModal(false)}
+      >
+        <View
+          className="flex-1 items-center justify-center px-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <View className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 w-full max-w-sm">
+            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+              Almost there!
+            </Text>
+            <Text className="text-base text-gray-600 dark:text-gray-400 leading-6 mb-6">
+              Lastly, add the services or products that you provide under each of the categories you have added.
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowNextStepModal(false);
+                router.replace(`/(business)/${businessId}/add-service` as any);
+              }}
+              className="bg-orange-500 py-4 rounded-xl items-center"
+              activeOpacity={0.85}
+            >
+              <Text className="text-white font-bold text-base">Proceed</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Confirmation modal */}
       <Modal
         visible={!!confirmCategory}
@@ -259,14 +292,14 @@ export default function ManageCategoriesScreen() {
       {/* Fixed bottom button */}
       <View className="px-5 py-4 bg-white dark:bg-[#1E293B] border-t border-gray-200 dark:border-[#334155]">
         <TouchableOpacity
-          onPress={() => router.replace(`/(business)/${businessId}/profile` as any)}
+          onPress={() => hasCategories && setShowNextStepModal(true)}
           disabled={!hasCategories}
           style={{ opacity: hasCategories ? 1 : 0.4 }}
           className="bg-orange-500 py-4 rounded-xl items-center"
           activeOpacity={0.85}
         >
           <Text className="text-white font-bold text-lg">
-            {hasCategories ? 'Continue to Business Profile' : 'Add at least one category'}
+            {hasCategories ? 'Continue' : 'Add at least one category'}
           </Text>
         </TouchableOpacity>
       </View>

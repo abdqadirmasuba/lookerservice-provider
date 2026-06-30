@@ -135,7 +135,7 @@ export default function BusinessStep2Screen() {
         <View className="flex-row items-center justify-between mb-3">
           <View>
             <Text className="text-base font-bold text-gray-900 dark:text-white">
-              Register Business
+               Business/ Individual/ Company Details
             </Text>
             <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Step {CURRENT_STEP} of {TOTAL_STEPS} — {STEP_LABELS[CURRENT_STEP - 1]}
@@ -168,7 +168,7 @@ export default function BusinessStep2Screen() {
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         <View className="px-6 py-6">
           <Text className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-            Business Hours
+            Work Hours 
           </Text>
           <Text className="text-sm text-gray-500 dark:text-gray-400 mb-5">
             Set your operating schedule for each day
@@ -187,7 +187,7 @@ export default function BusinessStep2Screen() {
           {/* Legend */}
           <View className="flex-row justify-center space-x-4 mb-5">
             {MODE_OPTIONS.map((opt) => (
-              <View key={opt.value} className="flex-row items-center space-x-1">
+              <View key={opt.value} className="flex-row items-center space-x-1 mr-2">
                 <View
                   className={`w-3 h-3 rounded-full ${
                     opt.value === 'closed'
@@ -278,7 +278,7 @@ export default function BusinessStep2Screen() {
                   {d.mode === 'closed' && (
                     <View className="px-4 py-3">
                       <Text className="text-xs text-red-500 font-medium">
-                        Closed — not included in schedule
+                        Closed — not available 
                       </Text>
                     </View>
                   )}
@@ -311,7 +311,7 @@ export default function BusinessStep2Screen() {
         <View className="flex-row space-x-3">
           <TouchableOpacity
             onPress={() => router.back()}
-            className="flex-1 bg-gray-100 dark:bg-[#0F172A] border border-gray-300 dark:border-[#334155] py-4 rounded-xl items-center"
+            className="flex-1 bg-gray-100 mr-2 dark:bg-[#0F172A] border border-gray-300 dark:border-[#334155] py-4 rounded-xl items-center"
           >
             <Text className="text-gray-700 dark:text-gray-300 font-bold">Back</Text>
           </TouchableOpacity>

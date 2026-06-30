@@ -89,7 +89,7 @@ export default function NotificationsScreen() {
     setIsLoading(true);
     try {
       const [unreadRes, countRes] = await Promise.all([
-        apiRequests.get('/notifications/unread'),
+        apiRequests.get('/notifications'),
         apiRequests.get('/notifications/count'),
       ]);
       if (unreadRes.data.success) {

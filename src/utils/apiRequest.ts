@@ -69,19 +69,4 @@ export const apiRequests = {
   delete: (url: string, config?: AxiosRequestConfig) => api.delete(url, config),
 };
 
-/**
- * POST /provider/logout — fire-and-forget; resolves even if the server call fails
- * so the client state is always cleared regardless.
- */
-export const callLogoutApi = async (): Promise<void> => {
-  try {
-    const installation_id = store.getState().auth.installationId;
-    await api.post(`/installations/${installation_id}/logout`);
-    await api.post('/provider/logout');
-
-  } catch {
-    // Ignore — we clear local state either way
-  }
-};
-
 export default api;

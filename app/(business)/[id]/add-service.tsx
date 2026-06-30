@@ -1,6 +1,4 @@
-﻿// File: app/(business)/[id]/add-service.tsx
-
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,13 +11,15 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import SvgIcon from '@/src/components/common/SvgIcon';
 import {
-  ArrowLeftIcon,
   WrenchScrewdriverIcon,
   RectangleGroupIcon,
   ArrowTopRightOnSquareIcon,
   PlusIcon,
+  HomeIcon,
+  UserCircleIcon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon } from 'react-native-heroicons/solid';
 import { getAvailableServices, getProviderServices } from '@/src/utils/business';
@@ -48,18 +48,16 @@ export default function AddServiceScreen() {
   const [available, setAvailable] = useState<AvailableService[]>([]);
   const [registered, setRegistered] = useState<ProviderService[]>([]);
   const [confirmService, setConfirmService] = useState<AvailableService | null>(null);
+  const [showDoneOptions, setShowDoneOptions] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, [businessId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [availRes, regRes] = await Promise.all([
         getAvailableServices(businessId),
         getProviderServices(businessId),
       ]);
+
       if (availRes.success) setAvailable(availRes.data || []);
       if (regRes.success) setRegistered(regRes.data || []);
     } catch (err: any) {
@@ -67,7 +65,13 @@ export default function AddServiceScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [businessId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData]),
+  );
 
   const registeredServiceIds = new Set(registered.map((s) => s.service_id));
   const unaddedServices = available.filter((s) => !registeredServiceIds.has(s.id));
@@ -87,14 +91,11 @@ export default function AddServiceScreen() {
       {/* Header */}
       <View className="px-5 pt-5 pb-4 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-[#334155]">
         <View className="flex-row items-center mb-3">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <ArrowLeftIcon size={24} color="#6B7280" />
-          </TouchableOpacity>
           <View className="flex-1">
             <View className="flex-row items-center">
               <WrenchScrewdriverIcon size={22} color="#2DA9E9" />
               <Text className="text-xl font-bold text-gray-900 dark:text-white ml-2">
-                Add a Service
+                Add Service
               </Text>
             </View>
             <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
@@ -127,7 +128,7 @@ export default function AddServiceScreen() {
       {/* Service list */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
       >
         {loading ? (
           <View className="py-20 items-center">
@@ -226,6 +227,31 @@ export default function AddServiceScreen() {
         )}
       </ScrollView>
 
+      {/* Done footer */}
+      <View className="absolute bottom-0 left-0 right-0 px-4 pb-8 pt-4 bg-white dark:bg-[#1E293B] border-t border-gray-100 dark:border-[#334155]">
+        <TouchableOpacity
+          onPress={() => setShowDoneOptions(true)}
+          disabled={loading || addedServices.length === 0}
+          className={`py-4 rounded-2xl items-center justify-center ${
+            loading || addedServices.length === 0
+              ? 'bg-gray-300 dark:bg-[#334155]'
+              : 'bg-primary-500'
+          }`}
+          style={{ minHeight: 54 }}
+          activeOpacity={0.85}
+        >
+          <Text
+            className={`font-bold text-base ${
+              loading || addedServices.length === 0
+                ? 'text-gray-500 dark:text-gray-400'
+                : 'text-white'
+            }`}
+          >
+            Done
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Confirmation modal */}
       <Modal
         visible={!!confirmService}
@@ -248,11 +274,11 @@ export default function AddServiceScreen() {
               Add Service
             </Text>
             <Text className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
-              Continue to register{' '}
+              Continue to add{' '}
               <Text className="font-bold text-gray-900 dark:text-white">
                 "{confirmService?.name}"
               </Text>{' '}
-              for your business?
+              to your business?
             </Text>
             <View className="flex-row" style={{ gap: 10 }}>
               <TouchableOpacity
@@ -270,6 +296,57 @@ export default function AddServiceScreen() {
                 className="flex-1 py-3 rounded-xl bg-primary-500 items-center"
               >
                 <Text className="font-semibold text-white">Continue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Done options modal */}
+      <Modal
+        visible={showDoneOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDoneOptions(false)}
+      >
+        <View
+          className="flex-1 items-center justify-center px-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+        >
+          <View className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 w-full max-w-sm">
+            <View className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-full items-center justify-center mb-4 self-center">
+              <CheckCircleIcon size={36} color="#10B981" />
+            </View>
+            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">
+              Services Added
+            </Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+              Where would you like to go next?
+            </Text>
+            <View style={{ gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDoneOptions(false);
+                  router.replace(`/(business)/${businessId}/profile` as any);
+                }}
+                className="py-3 rounded-xl bg-primary-500 flex-row items-center justify-center"
+                activeOpacity={0.85}
+              >
+                <UserCircleIcon size={18} color="#FFFFFF" />
+                <Text className="font-semibold text-white ml-2">Manage Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDoneOptions(false);
+                  router.replace('/(tabs)' as any);
+                }}
+                className="py-3 rounded-xl bg-gray-100 dark:bg-[#0F172A] flex-row items-center justify-center"
+                activeOpacity={0.85}
+              >
+                <HomeIcon size={18} color="#6B7280" />
+                <Text className="font-semibold text-gray-700 dark:text-gray-300 ml-2">
+                  Go Home
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

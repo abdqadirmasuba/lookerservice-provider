@@ -73,9 +73,6 @@ export default function RegisterScreen() {
   const checkPasswordStrength = (pass: string) => {
     let strength = 0;
     if (pass.length >= 8) strength++;
-    if (/[A-Z]/.test(pass)) strength++;
-    if (/[a-z]/.test(pass)) strength++;
-    if (/[0-9]/.test(pass)) strength++;
     if (/[^A-Za-z0-9]/.test(pass)) strength++;
     return strength;
   };
@@ -83,22 +80,6 @@ export default function RegisterScreen() {
   const handlePasswordChange = (text: string) => {
     setPassword(text);
     setPasswordStrength(checkPasswordStrength(text));
-  };
-
-  const getStrengthColor = () => {
-    if (passwordStrength <= 2) return '#EF4444'; // red
-    if (passwordStrength <= 3) return '#F59E0B'; // orange
-    return '#10B981'; // green
-  };
-
-  const getStrengthText = () => {
-    if (passwordStrength <= 2) return 'Weak';
-    if (passwordStrength <= 3) return 'Medium';
-    return 'Strong';
-  };
-
-  const getStrengthWidth = () => {
-    return `${(passwordStrength / 5) * 100}%`;
   };
 
   const handleRegister = async () => {
@@ -132,7 +113,7 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (passwordStrength < 3) {
+    if (passwordStrength < 0) {
       setErrorMessage('Please use a stronger password with at least 3 requirements met');
       return;
     }
@@ -350,49 +331,14 @@ export default function RegisterScreen() {
 
                 {/* Password Strength Indicator */}
                 {password.length > 0 && (
-                  <View className="mt-3">
-                    <View className="flex-row items-center justify-between mb-2">
-                      <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Password Strength
-                      </Text>
-                      <Text className="text-xs font-bold" style={{ color: getStrengthColor() }}>
-                        {getStrengthText()}
-                      </Text>
-                    </View>
-                    
-                    {/* Strength Bar */}
-                    <View className={`h-2 ${isDark ? 'bg-dark-bg' : 'bg-gray-200'} rounded-full overflow-hidden`}>
-                      <View
-                        className="h-full rounded-full transition-all duration-300"
-                        style={{
-                          width: getStrengthWidth() as unknown as any,
-                          backgroundColor: getStrengthColor(),
-                        }}
-                      />
-                    </View>
-
+                  <View className="mb-2">                    
                     {/* Requirements Checklist */}
                     <View className="mt-3 space-y-2">
                       <RequirementItem 
                         met={password.length >= 8} 
                         text="At least 8 characters" 
                         isDark={isDark} 
-                      />
-                      <RequirementItem 
-                        met={/[A-Z]/.test(password)} 
-                        text="One uppercase letter" 
-                        isDark={isDark} 
-                      />
-                      <RequirementItem 
-                        met={/[a-z]/.test(password)} 
-                        text="One lowercase letter" 
-                        isDark={isDark} 
-                      />
-                      <RequirementItem 
-                        met={/[0-9]/.test(password)} 
-                        text="One number" 
-                        isDark={isDark} 
-                      />
+                      />                      
                     </View>
                   </View>
                 )}
@@ -477,12 +423,12 @@ export default function RegisterScreen() {
               {/* Register Button */}
               <TouchableOpacity
                 onPress={handleRegister}
-                disabled={isLoading || !agreedToTerms || passwordStrength < 3 || password !== confirmPassword}
+                disabled={isLoading || !agreedToTerms || passwordStrength < 0 || password !== confirmPassword}
                 activeOpacity={0.8}
               >
                 <LinearGradient
                   colors={
-                    !isLoading && agreedToTerms && passwordStrength >= 3 && password === confirmPassword
+                    !isLoading && agreedToTerms && passwordStrength >= 1 && password === confirmPassword
                       ? ['#F57C1F', '#E06A0F']
                       : ['#9CA3AF', '#6B7280']
                   }

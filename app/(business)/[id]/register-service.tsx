@@ -229,16 +229,6 @@ export default function RegisterServiceScreen() {
   };
 
   const handleSave = () => {
-    if (items.length === 0) {
-      showAlert({
-        type: 'warning',
-        title: 'No Items Added',
-        message: `You haven't listed any of the services you provide under "${serviceName}". Please add at least one item.`,
-        buttons: [{ text: 'OK', style: 'default' }],
-      });
-      return;
-    }
-
     if (formHasContent) {
       showAlert({
         type: 'warning',

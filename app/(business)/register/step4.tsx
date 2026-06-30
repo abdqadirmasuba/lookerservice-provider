@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Modal,
   useColorScheme,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -96,6 +97,8 @@ export default function BusinessStep4Screen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [newBusinessId, setNewBusinessId] = useState('');
 
   const handleClose = () => {
     Alert.alert(
@@ -208,39 +211,33 @@ export default function BusinessStep4Screen() {
       }
       dispatch(resetBusinessRegistration());
 
-      Alert.alert(
-        'Business Registered!',
-        "Your business has been submitted for review. You'll be notified once approved.",
-        [{
-          text: 'OK',
-          onPress: async () => {
-            try {
-              const meRes = await getMe();
-              if (meRes?.success && meRes?.data) {
-                dispatch(loginSuccess({
-                  token: meRes.data.access_token ?? meRes.data.token,
-                  refreshToken: meRes.data.refresh_token,
-                  providerBusinesses: meRes.data.provider_businesses || [],
-                  providerTier: meRes.data.user?.provider_tier === 'pro' ? 'pro' : 'free',
-                }));
-                dispatch(setUser({
-                  id: meRes.data.user.id,
-                  fullName: meRes.data.user.full_name,
-                  email: meRes.data.user.email,
-                  phone: meRes.data.user.phone,
-                  profileImage: meRes.data.user.profile_picture_url ?? undefined,
-                  isEmailVerified: meRes.data.user.email_verified,
-                  isPhoneVerified: meRes.data.user.phone_verified,
-                  createdAt: meRes.data.user.created_at,
-                }));
-              }
-            } catch (_) {
-              // silent — navigate regardless
-            }
-            router.replace('/(tabs)');
-          },
-        }],
-      );
+      // Refresh auth state silently before showing next-step modal
+      try {
+        const meRes = await getMe();
+        if (meRes?.success && meRes?.data) {
+          dispatch(loginSuccess({
+            token: meRes.data.access_token ?? meRes.data.token,
+            refreshToken: meRes.data.refresh_token,
+            providerBusinesses: meRes.data.provider_businesses || [],
+            providerTier: meRes.data.user?.provider_tier === 'pro' ? 'pro' : 'free',
+          }));
+          dispatch(setUser({
+            id: meRes.data.user.id,
+            fullName: meRes.data.user.full_name,
+            email: meRes.data.user.email,
+            phone: meRes.data.user.phone,
+            profileImage: meRes.data.user.profile_picture_url ?? undefined,
+            isEmailVerified: meRes.data.user.email_verified,
+            isPhoneVerified: meRes.data.user.phone_verified,
+            createdAt: meRes.data.user.created_at,
+          }));
+        }
+      } catch (_) {
+        // silent — show modal regardless
+      }
+
+      setNewBusinessId(registeredBusiness?.id ?? '');
+      setShowSuccessModal(true);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to register business. Please try again.');
     } finally {
@@ -280,7 +277,7 @@ export default function BusinessStep4Screen() {
         <View className="flex-row items-center justify-between mb-3">
           <View>
             <Text className="text-base font-bold text-gray-900 dark:text-white">
-              Register Business
+              Business/ Individual/ Company Details
             </Text>
             <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Step {CURRENT_STEP} of {TOTAL_STEPS} — {STEP_LABELS[CURRENT_STEP - 1]}
@@ -323,7 +320,7 @@ export default function BusinessStep4Screen() {
           {/* Business Info card */}
           {sectionCard(
             <>
-              {sectionHeader(<BuildingStorefrontIcon size={18} color="#0891B2" />, 'Business Info', 1)}
+              {sectionHeader(<BuildingStorefrontIcon size={18} color="#0891B2" />, 'Business/ Brand Info', 1)}
               {/* Logo */}
               {reg.business_logo ? (
                 <View className="flex-row items-center mb-3">
@@ -332,22 +329,24 @@ export default function BusinessStep4Screen() {
                     style={{ width: 52, height: 52, borderRadius: 12 }}
                     resizeMode="cover"
                   />
-                  <Text className="text-xs text-gray-400 ml-2">Business logo</Text>
+                  <Text className="text-xs text-gray-400 ml-2"> Logo</Text>
                 </View>
               ) : null}
               <View style={{ gap: 8 }}>
                 <View>
-                  <Text className="text-xs text-gray-400 mb-0.5">Business Name</Text>
+                  <Text className="text-xs text-gray-400 mb-0.5">Name</Text>
                   <Text className="text-sm font-semibold text-gray-900 dark:text-white">
                     {reg.business_name}
                   </Text>
                 </View>
-                <View>                  <Text className="text-xs text-gray-400 mb-0.5">Provider Type</Text>
+                <View>
+                  <Text className="text-xs text-gray-400 mb-0.5">Provider Type</Text>
                   <Text className="text-sm font-semibold text-gray-900 dark:text-white capitalize">
                     {PROVIDER_TYPE_LABELS[reg.provider_type] || reg.provider_type || '—'}
                   </Text>
                 </View>
-                <View>                  <Text className="text-xs text-gray-400 mb-0.5">Description</Text>
+                <View>
+                  <Text className="text-xs text-gray-400 mb-0.5">Description</Text>
                   <Text className="text-sm text-gray-700 dark:text-gray-300" numberOfLines={3}>
                     {reg.business_description}
                   </Text>
@@ -528,6 +527,42 @@ export default function BusinessStep4Screen() {
           </View>
         )}
       </View>
+      {/* ── Business setup success modal ── */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View
+          className="flex-1 items-center justify-center px-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+        >
+          <View className="bg-white dark:bg-[#1E293B] rounded-3xl p-7 w-full max-w-sm">
+            <View className="items-center mb-5">
+              <View className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full items-center justify-center mb-3">
+                <CheckCircleSolid size={40} color="#10B981" />
+              </View>
+              <Text className="text-xl font-bold text-gray-900 dark:text-white text-center">
+                Your profile is set!
+              </Text>
+            </View>
+            <Text className="text-base text-gray-600 dark:text-gray-400 text-center leading-6 mb-7">
+              Next step is mentioning your services or products that clients look for. Let's choose the categories that describe what you offer.
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowSuccessModal(false);
+                router.replace(`/(business)/${newBusinessId}/categories` as any);
+              }}
+              className="bg-orange-500 py-4 rounded-xl items-center"
+              activeOpacity={0.85}
+            >
+              <Text className="text-white font-bold text-base">Choose Categories</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

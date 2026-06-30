@@ -27,6 +27,7 @@ const NETWORK_TIMEOUT_MS = 10_000;
 
 import { config } from '@/src/utils/apiConfig';
 import { apiRequests } from '@/src/utils/apiRequest';
+import { getProviderProfile } from '@/src/utils/business';
 const API_BASE_URL = config.domain_url;
 
 /** Races a promise against a timeout. Rejects with code 'NETWORK_TIMEOUT' if the deadline passes first. */
@@ -121,7 +122,30 @@ export default function AuthLoadingScreen() {
         void sendInstallationHeartbeat(installationId);
       }
 
-      setTimeout(() => {
+      setTimeout(async () => {
+        if (!res.data.provider_businesses || res.data.provider_businesses.length === 0) {
+          router.replace('/(business)/register-business');
+          return;
+        }
+
+        // Enforce onboarding: categories → services → dashboard
+        const firstBusiness = res.data.provider_businesses[0];
+        const businessId: string = firstBusiness.id;
+        try {
+          const profile = await getProviderProfile(businessId);
+          const profileData = profile?.data;
+          if (!profileData || profileData.categories_count === 0) {
+            router.replace(`/(business)/${businessId}/categories` as any);
+            return;
+          }
+          if (profileData.services_count === 0) {
+            router.replace(`/(business)/${businessId}/add-service` as any);
+            return;
+          }
+        } catch (_) {
+          // If profile fetch fails, fall through to tabs rather than blocking the user
+        }
+
         router.replace('/(tabs)');
       }, 500);
 

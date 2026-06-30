@@ -274,7 +274,7 @@ export default function BusinessStep1Screen() {
         <View className="flex-row items-center justify-between mb-3">
           <View>
             <Text className="text-base font-bold text-gray-900 dark:text-white">
-              Register Business
+              Business/ Individual/ Company Details
             </Text>
             <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Step {CURRENT_STEP} of {TOTAL_STEPS} — {STEP_LABELS[CURRENT_STEP - 1]}
@@ -357,7 +357,7 @@ export default function BusinessStep1Screen() {
                 )}
               </TouchableOpacity>
               <Text className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
-                {logoUri ? 'Tap to change business logo' : 'Add business logo (optional)'}
+                {logoUri ? 'Tap to change  logo' : 'Add logo (optional)'}
               </Text>
             </View>
 
@@ -366,7 +366,7 @@ export default function BusinessStep1Screen() {
               <View className="flex-row items-center mb-2">
                 <BuildingStorefrontIcon size={14} color="#0891B2" />
                 <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300 ml-1.5">
-                  Business Name <Text className="text-red-500">*</Text>
+                  Business / Brand Name <Text className="text-red-500">*</Text>
                 </Text>
               </View>
               <TextInput
@@ -393,11 +393,11 @@ export default function BusinessStep1Screen() {
               <View className="flex-row items-center mb-2">
                 <DocumentTextIcon size={14} color="#8B5CF6" />
                 <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300 ml-1.5">
-                  Business Description <Text className="text-red-500">*</Text>
+                  Brief Description <Text className="text-red-500">*</Text>
                 </Text>
               </View>
               <TextInput
-                placeholder="Describe what your business does, services offered, specialisations..."
+                placeholder="Describe briefly your services and specialisations..."
                 placeholderTextColor="#9CA3AF"
                 value={description}
                 onChangeText={(t) => { if (t.length <= 500) setDescription(t); }}
@@ -553,7 +553,7 @@ export default function BusinessStep1Screen() {
                     Email
                   </Text>
                   <TextInput
-                    placeholder="business@example.com"
+                    placeholder="support@yourbusiness.com"
                     placeholderTextColor="#9CA3AF"
                     value={contactEmail}
                     onChangeText={setContactEmail}
@@ -608,7 +608,7 @@ export default function BusinessStep1Screen() {
               <View className="flex-row items-center mx-3">
                 <MapPinIcon size={12} color="#0891B2" />
                 <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-1.5">
-                  Business Location
+                   Location Information
                 </Text>
               </View>
               <View className="flex-1 h-px bg-gray-200 dark:bg-[#334155]" />

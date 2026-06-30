@@ -110,7 +110,7 @@ export default function BusinessStep3Screen() {
         <View className="flex-row items-center justify-between mb-3">
           <View>
             <Text className="text-base font-bold text-gray-900 dark:text-white">
-              Register Business
+               Business/ Individual/ Company Details
             </Text>
             <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Step {CURRENT_STEP} of {TOTAL_STEPS} — {STEP_LABELS[CURRENT_STEP - 1]}

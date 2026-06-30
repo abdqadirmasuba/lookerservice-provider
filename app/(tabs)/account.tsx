@@ -7,7 +7,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/src/store';
 import { logout } from '@/src/store/slices/authSlice';
-import { callLogoutApi } from '@/src/utils/apiRequest';
 import { removeRefreshToken } from '@/src/utils/refreshTokenStorage';
 import {
   UserCircleIcon,
@@ -20,6 +19,7 @@ import {
   CheckBadgeIcon,
   ArrowRightOnRectangleIcon,
 } from 'react-native-heroicons/outline';
+import { apiRequests } from '@/src/utils/apiRequest';
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function AccountScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            await callLogoutApi();
+            await apiRequests.post('/provider/logout');
             await removeRefreshToken();
             dispatch(logout());
             router.replace('/(auth)/login');
@@ -148,8 +148,8 @@ export default function AccountScreen() {
             )}
             <MenuItem
               icon={<BuildingStorefrontIcon size={24} color="#F57C1F" />}
-              title={providerTier === 'pro' ? 'My Businesses' : 'Manage Business'}
-              subtitle={providerTier === 'pro' ? 'Manage your registered businesses' : 'View and edit your business'}
+              title={providerTier === 'pro' ? 'My Businesses' : 'Manage Profile'}
+              subtitle={providerTier === 'pro' ? 'Manage your registered businesses' : 'View and edit your business profile'}
               onPress={() =>
                 providerTier === 'pro'
                   ? router.push('/(business)/list')

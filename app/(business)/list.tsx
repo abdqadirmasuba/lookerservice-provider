@@ -324,17 +324,17 @@ export default function BusinessListScreen() {
                 <BuildingStorefrontIcon size={48} color="#9CA3AF" />
               </View>
               <Text className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                No Businesses Yet
+                Set Up details
               </Text>
               <Text className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6 px-8">
-                Register your first business to start receiving bookings
+                Start by adding information about your sevices, business or company 
               </Text>
               <TouchableOpacity
                 onPress={() => router.push('/(business)/register/step1')}
                 className="bg-primary-500 px-6 py-3 rounded-xl flex-row items-center"
               >
                 <PlusCircleIcon size={20} color="#FFFFFF" />
-                <Text className="text-white font-bold ml-2">Register Business</Text>
+                <Text className="text-white font-bold ml-2">Get Started</Text>
               </TouchableOpacity>
             </View>
           )}

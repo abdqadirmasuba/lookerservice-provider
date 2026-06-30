@@ -142,13 +142,6 @@ export default function BusinessProfileScreen() {
     fetchBusinessProfile();
   }, [businessId]);
 
-  // Redirect to category setup if no categories
-  useEffect(() => {
-    if (business && business.categories_count === 0) {
-      router.replace(`/(business)/${businessId}/categories` as any);
-    }
-  }, [business]);
-
   const fetchBusinessProfile = async () => {
     try {
       setLoading(true);
@@ -580,7 +573,7 @@ export default function BusinessProfileScreen() {
                     activeOpacity={0.85}
                   >
                     <PlusCircleIcon size={18} color="#fff" />
-                    <Text className="text-white font-bold text-sm ml-2">Add a Service</Text>
+                    <Text className="text-white font-bold text-sm ml-2">Add Services</Text>
                   </TouchableOpacity>
                 </View>
               )}

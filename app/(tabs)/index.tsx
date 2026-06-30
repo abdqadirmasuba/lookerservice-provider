@@ -51,6 +51,12 @@ export default function DashboardScreen() {
   const activeBusiness = providerBusinesses.find(b => b.id === activeBusinessId);
   const businessCount = providerBusinesses.length;
 
+  useEffect(() => {
+    if (!hasBusinesses) {
+      router.replace('/(business)/register-business');
+    }
+  }, [hasBusinesses, router]);
+
   // Fetch dashboard data
   const fetchDashboardData = async (providerId: string) => {
     setIsLoading(true);
@@ -97,6 +103,17 @@ export default function DashboardScreen() {
     }
     Promise.all(tasks).finally(() => setRefreshing(false));
   }, [activeBusinessId]);
+
+  if (!hasBusinesses) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-[#0F172A]">
+        <StatusBar style="auto" />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#F57C1F" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -221,28 +238,9 @@ export default function DashboardScreen() {
           )}
         </LinearGradient>
 
-        {/* Stats Grid or Empty State */}
+        {/* Stats Grid */}
         <View className="px-6 -mt-4">
-          {!hasBusinesses ? (
-            <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center shadow-sm">
-              <View className="w-20 h-20 bg-primary-50 dark:bg-primary-900/20 rounded-full items-center justify-center mb-4">
-                <PlusCircleIcon size={40} color="#F57C1F" />
-              </View>
-              <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">
-                No Active Businesses
-              </Text>
-              <Text className="text-gray-500 dark:text-gray-400 text-center mb-6 px-4">
-                Register your first business to start receiving bookings and grow your service offerings.
-              </Text>
-              <TouchableOpacity
-                onPress={() => router.push('/(business)/register/step1')}
-                className="bg-primary-500 px-8 py-4 rounded-xl shadow-sm"
-                activeOpacity={0.8}
-              >
-                <Text className="text-white font-bold text-base">Register a Business</Text>
-              </TouchableOpacity>
-            </View>
-          ) : isLoading && !dashboardData ? (
+          {isLoading && !dashboardData ? (
             <View className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 items-center">
               <ActivityIndicator size="large" color="#F57C1F" />
               <Text className="text-gray-500 mt-2">Loading dashboard...</Text>

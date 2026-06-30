@@ -132,8 +132,12 @@ export default function LoginScreen() {
           void sendInstallationHeartbeat(currentInstallationId);
         }
 
-        // Redirect to dashboard
-        router.replace('/(tabs)');
+        // Redirect to the right screen based on provider business state
+        if (!res.data.provider_businesses || res.data.provider_businesses.length === 0) {
+          router.replace('/(business)/register-business');
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
         const msg = res.message || 'Login failed. Please try again.';
         dispatch(loginFailure(msg));

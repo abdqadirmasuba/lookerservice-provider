@@ -576,7 +576,7 @@ export default function RequestsScreen() {
 
       {/* Header */}
       <View className="px-6 pt-4 pb-3">
-        <Text className="text-2xl font-bold text-gray-900 dark:text-white">Direct Requests</Text>
+        <Text className="text-2xl font-bold text-gray-900 dark:text-white">Client Requests</Text>
         <Text className="text-sm mt-1 text-gray-500 dark:text-gray-400">
           Clients requesting your services directly
         </Text>
@@ -601,10 +601,10 @@ export default function RequestsScreen() {
                 <ClipboardDocumentListIconPlaceholder />
               </View>
               <Text className="text-base font-bold text-gray-700 dark:text-gray-300 mb-1">
-                No direct requests yet
+                No client requests yet
               </Text>
               <Text className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                When a client sends you a direct service request it will appear here.
+                When a client sends you a service request it will appear here.
               </Text>
             </View>
           ) : (
@@ -620,7 +620,7 @@ export default function RequestsScreen() {
       </ScrollView>
 
       {/* FAB — Explore Open Requests */}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         onPress={() => setExploreVisible(true)}
         activeOpacity={0.85}
         className="absolute bottom-8 right-5 bg-primary-500 rounded-2xl px-5 py-4 flex-row items-center shadow-lg"
@@ -634,7 +634,7 @@ export default function RequestsScreen() {
       >
         <SparklesIcon size={20} color="#fff" />
         <Text className="text-white font-bold ml-2 text-sm">Explore Open Requests</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       <ExploreModal visible={exploreVisible} onClose={() => setExploreVisible(false)} />
     </SafeAreaView>
