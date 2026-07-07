@@ -70,6 +70,10 @@ export default function LoginScreen() {
       setErrorMessage('Please enter your password');
       return;
     }
+    if (password.length < 8) {
+      setErrorMessage('The password should be at least 8 characters');
+      return;
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setErrorMessage('Please enter a valid email address');

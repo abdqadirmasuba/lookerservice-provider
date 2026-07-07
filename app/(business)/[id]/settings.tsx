@@ -132,7 +132,7 @@ export default function BusinessSettingsScreen() {
               Insights
             </Text>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() => router.push(`/(business)/${businessId}/analytics` as any)}
               className="flex-row items-center py-4 border-b border-gray-100 dark:border-[#334155]"
               activeOpacity={0.7}
@@ -149,9 +149,9 @@ export default function BusinessSettingsScreen() {
                 </Text>
               </View>
               <ChevronRightIcon size={20} color="#9CA3AF" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() => router.push('/(earnings)' as any)}
               className="flex-row items-center py-4"
               activeOpacity={0.7}
@@ -168,8 +168,8 @@ export default function BusinessSettingsScreen() {
                 </Text>
               </View>
               <ChevronRightIcon size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
+            </TouchableOpacity>*/}
+          </View> 
 
           {/* Profile */}
           <View className="bg-white dark:bg-[#1E293B] rounded-2xl px-4 border border-gray-200 dark:border-[#334155]">
@@ -221,7 +221,7 @@ export default function BusinessSettingsScreen() {
               <ChevronRightIcon size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() => router.push(`/(settings)/notifications` as any)}
               className="flex-row items-center py-4 border-b border-gray-100 dark:border-[#334155]"
               activeOpacity={0.7}
@@ -238,7 +238,7 @@ export default function BusinessSettingsScreen() {
                 </Text>
               </View>
               <ChevronRightIcon size={20} color="#9CA3AF" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TouchableOpacity
               onPress={() => router.push(`/(business)/${businessId}/categories` as any)}
@@ -250,10 +250,10 @@ export default function BusinessSettingsScreen() {
               </View>
               <View className="flex-1">
                 <Text className="text-base font-semibold text-gray-900 dark:text-white">
-                  Manage Categories
+                  Manage Categories and Services
                 </Text>
                 <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                  Add or review your service categories
+                  Add or review your categories and services
                 </Text>
               </View>
               <ChevronRightIcon size={20} color="#9CA3AF" />
